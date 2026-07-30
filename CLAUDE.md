@@ -62,13 +62,20 @@ MediaRepository (MediaStore scan)  ─┐
 PlaybackConnection (MediaController)┘        │
         │                                    │
         ▼                                    ▼
-PlaybackService (MediaSessionService +  SongListScreen / NowPlayingScreen
-   ExoPlayer + MediaSession)              (ui/screens, via ui/navigation/NavGraph)
+PlaybackService (MediaSessionService +  LibraryScreen / AlbumDetailScreen / ArtistDetailScreen /
+   ExoPlayer + MediaSession)              NowPlayingScreen / QueueScreen
+                                           (ui/screens, via ui/navigation/NavGraph)
 ```
 
 - **`data/MediaRepository`** — queries `MediaStore.Audio.Media` once (`IS_MUSIC != 0`), caches
   the result in a `StateFlow<List<Song>>`. Library refresh is scan-on-demand only; there is no
-  `ContentObserver`-based live refresh (known, deliberate gap).
+  `ContentObserver`-based live refresh (known, deliberate gap). `Song` carries both `albumId` and
+  `artistId` (not just the display strings) so grouping is done by stable MediaStore ID, not by
+  name — avoids merging differently-tagged songs that happen to share a misspelled artist string.
+- **`data/model/AlbumGroup` / `ArtistGroup`** (`toAlbumGroups()` / `toArtistGroups()` extensions
+  on `List<Song>`) — pure in-memory `groupBy` derivations, no separate data source. Computed as
+  part of `MusicUiState` (`albums`, `artists`), sourced from `filteredSongs` so the library
+  search box filters all three tabs (songs/albums/artists) consistently.
 - **`data/AlbumArtExtractor`** — the *only* place that calls
   `MediaMetadataRetriever.getEmbeddedPicture()`. Shared by both the Coil fetcher and
   `PlaybackConnection` so a song's embedded art is never extracted twice.
@@ -89,9 +96,21 @@ PlaybackService (MediaSessionService +  SongListScreen / NowPlayingScreen
   loop (~500ms) while playing since `Player` has no continuous position-update callback. Also
   lazily enriches the *currently playing* `MediaItem`'s metadata with embedded art (via
   `AlbumArtExtractor`) after a track transition, rather than pre-loading art for the whole queue.
+  Shuffle/repeat/queue reordering (`toggleShuffle`, `cycleRepeatMode`, `moveQueueItem`,
+  `removeQueueItem`, `playQueueItem`) are thin wrappers over `Player`'s own
+  `shuffleModeEnabled`/`repeatMode`/`moveMediaItem`/`removeMediaItem` — ExoPlayer already
+  implements queue manipulation natively, this layer only exposes it as `StateFlow` state.
+  Known v1 simplification: the queue list (`queueMediaIds`) reflects playlist/index order, not
+  the shuffled play order — Media3 applies shuffle to next/previous navigation, not to what
+  `getMediaItemAt(index)` returns.
 - **`viewmodel/MusicViewModel`** — combines `MediaRepository.songs` + `PlaybackConnection.state`
-  into one `MusicUiState`. Manual DI (no Hilt/Koin): `App` holds the single `MediaRepository`
-  instance; `MusicViewModelFactory` wires it up.
+  + a `searchQuery` `StateFlow<String>` into one `MusicUiState` (also derives `currentSong` and
+  `queue: List<Song>` by mapping `PlaybackUiState.queueMediaIds` back to `Song` via the
+  repository's song list). Manual DI (no Hilt/Koin): `App` holds the single `MediaRepository`
+  instance; `MusicViewModelFactory` wires it up. `playSong(song, fromList = uiState.value.songs)`
+  takes an optional queue scope — `AlbumDetailScreen`/`ArtistDetailScreen` pass the group's own
+  song list so playing from a group's detail screen queues just that group, not the whole
+  library.
 - **`ui/permissions/AudioPermissionState`** — required-permission choice is SDK-gated:
   `READ_MEDIA_AUDIO` on API 33+, `READ_EXTERNAL_STORAGE` below that (declared in the manifest
   with `android:maxSdkVersion="32"`). `MainActivity` gates the whole `NavGraph` behind this

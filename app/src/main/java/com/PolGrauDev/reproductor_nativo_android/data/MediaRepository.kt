@@ -35,6 +35,7 @@ class MediaRepository(private val context: Context) {
             MediaStore.Audio.Media.YEAR,
             MediaStore.Audio.Media.DURATION,
             MediaStore.Audio.Media.ALBUM_ID,
+            MediaStore.Audio.Media.ARTIST_ID,
         )
         val selection = "${MediaStore.Audio.Media.IS_MUSIC} != 0"
         val sortOrder = "${MediaStore.Audio.Media.TITLE} ASC"
@@ -49,6 +50,7 @@ class MediaRepository(private val context: Context) {
                 val yearCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.YEAR)
                 val durationCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DURATION)
                 val albumIdCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM_ID)
+                val artistIdCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ARTIST_ID)
 
                 while (cursor.moveToNext()) {
                     val id = cursor.getLong(idCol)
@@ -61,6 +63,7 @@ class MediaRepository(private val context: Context) {
                         year = year,
                         durationMs = cursor.getLong(durationCol),
                         albumId = cursor.getLong(albumIdCol).takeIf { it > 0 },
+                        artistId = cursor.getLong(artistIdCol).takeIf { it > 0 },
                         contentUri = ContentUris.withAppendedId(collection, id),
                     )
                 }

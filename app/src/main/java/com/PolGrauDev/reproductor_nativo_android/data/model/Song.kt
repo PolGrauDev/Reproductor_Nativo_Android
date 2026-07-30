@@ -10,5 +10,6 @@ data class Song(
     val year: Int?,
     val durationMs: Long,
     val albumId: Long?,
+    val artistId: Long?,
     val contentUri: Uri,
 )
