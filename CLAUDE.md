@@ -104,7 +104,19 @@ PlaylistRepository (Room: favorites +     (ui/screens, via ui/navigation/NavGrap
   that explicit call does not get picked up.
 - **`player/PlaybackService`** — `MediaSessionService` owning the `ExoPlayer` + `MediaSession`.
   Do not add a manual `onTaskRemoved()` override to pause/stop playback — Media3 already does
-  this by default (`pauseAllPlayersAndStopSelf()` when no session is actively playing).
+  this by default (`pauseAllPlayersAndStopSelf()` when no session is actively playing). The
+  notification/lock-screen's shuffle and repeat buttons are built from `Player.COMMAND_SET_SHUFFLE_MODE`/
+  `Player.COMMAND_SET_REPEAT_MODE` `CommandButton`s in `SLOT_OVERFLOW` (`buildMediaButtonPreferences()`),
+  not a custom `SessionCommand` — Media3's own `CommandButton.executeAction(MediaController)` already
+  knows how to toggle shuffle and, for repeat, set whatever mode is passed as the button's
+  `parameter`, so no `MediaSession.Callback`/`onCustomCommand` override is needed. Because repeat
+  doesn't auto-cycle, the repeat button's `parameter` is always precomputed as "the next mode in the
+  cycle" (`nextRepeatMode()`, same OFF→ALL→ONE order as `PlaybackConnection.cycleRepeatMode()` but
+  duplicated here since this runs directly against the service's `Player`, not through
+  `PlaybackConnection`). A `Player.Listener` added directly to the service's `ExoPlayer` (separate
+  from `PlaybackConnection`'s own client-side listener) rebuilds and republishes both buttons via
+  `mediaSession.setMediaButtonPreferences(...)` on every shuffle/repeat change, whether it
+  originated from the notification or from `NowPlayingScreen` in-app.
 - **`player/PlaybackConnection`** — the only bridge between UI-layer code and the Service; binds
   via `MediaController` + `SessionToken`, never a raw Service reference. Translates
   `Player.Listener` callbacks into `PlaybackUiState` (`StateFlow`), and runs a manual polling
