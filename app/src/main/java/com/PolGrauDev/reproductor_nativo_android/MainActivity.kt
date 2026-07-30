@@ -18,14 +18,19 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.PolGrauDev.reproductor_nativo_android.ui.navigation.NavGraph
 import com.PolGrauDev.reproductor_nativo_android.ui.permissions.AudioPermissionStatus
 import com.PolGrauDev.reproductor_nativo_android.ui.permissions.rememberAudioPermissionState
@@ -44,9 +49,13 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             Reproductor_Nativo_AndroidTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+                val snackbarHostState = remember { SnackbarHostState() }
+                Scaffold(
+                    modifier = Modifier.fillMaxSize(),
+                    snackbarHost = { SnackbarHost(snackbarHostState) },
+                ) { innerPadding ->
                     Box(modifier = Modifier.padding(innerPadding)) {
-                        AudioLibraryGate(viewModel = musicViewModel)
+                        AudioLibraryGate(viewModel = musicViewModel, snackbarHostState = snackbarHostState)
                     }
                 }
             }
@@ -55,7 +64,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-private fun AudioLibraryGate(viewModel: MusicViewModel) {
+private fun AudioLibraryGate(viewModel: MusicViewModel, snackbarHostState: SnackbarHostState) {
     val context = LocalContext.current
     val permissionState = rememberAudioPermissionState()
 
@@ -63,6 +72,13 @@ private fun AudioLibraryGate(viewModel: MusicViewModel) {
         if (permissionState.status == AudioPermissionStatus.NotRequested) {
             permissionState.request()
         }
+    }
+
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    LaunchedEffect(uiState.playback.errorMessage) {
+        val message = uiState.playback.errorMessage ?: return@LaunchedEffect
+        snackbarHostState.showSnackbar(message)
+        viewModel.clearPlaybackError()
     }
 
     when (permissionState.status) {

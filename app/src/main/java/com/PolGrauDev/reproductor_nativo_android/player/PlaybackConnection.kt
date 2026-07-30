@@ -5,6 +5,7 @@ import android.content.Context
 import androidx.core.content.ContextCompat
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
+import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.Timeline
 import androidx.media3.session.MediaController
@@ -35,7 +36,10 @@ data class PlaybackUiState(
     val repeatMode: Int = Player.REPEAT_MODE_OFF,
     val queueMediaIds: List<String> = emptyList(),
     val currentIndex: Int = -1,
+    val errorMessage: String? = null,
 )
+
+private const val MAX_CONSECUTIVE_ERRORS = 3
 
 /**
  * Puente entre la UI/ViewModel y [PlaybackService]. La UI nunca habla con el Service
@@ -48,12 +52,14 @@ class PlaybackConnection(private val context: Context) {
     private var controller: MediaController? = null
     private var controllerFuture: ListenableFuture<MediaController>? = null
     private var positionJob: Job? = null
+    private var consecutiveErrorCount = 0
 
     private val _state = MutableStateFlow(PlaybackUiState())
     val state: StateFlow<PlaybackUiState> = _state.asStateFlow()
 
     private val playerListener = object : Player.Listener {
         override fun onIsPlayingChanged(isPlaying: Boolean) {
+            if (isPlaying) consecutiveErrorCount = 0
             _state.update { it.copy(isPlaying = isPlaying) }
             togglePositionPolling(isPlaying)
         }
@@ -80,6 +86,25 @@ class PlaybackConnection(private val context: Context) {
 
         override fun onTimelineChanged(timeline: Timeline, reason: Int) {
             refreshQueue()
+        }
+
+        override fun onPlayerError(error: PlaybackException) {
+            val failedTitle = controller?.currentMediaItem?.mediaMetadata?.title?.toString()
+            consecutiveErrorCount++
+
+            val message = if (consecutiveErrorCount > MAX_CONSECUTIVE_ERRORS) {
+                "Varias canciones seguidas no se han podido reproducir. Reproducción detenida."
+            } else {
+                error.toUserMessage(failedTitle)
+            }
+            _state.update { it.copy(errorMessage = message) }
+
+            val c = controller
+            if (c != null && consecutiveErrorCount <= MAX_CONSECUTIVE_ERRORS && c.hasNextMediaItem()) {
+                c.seekToNextMediaItem()
+                c.prepare()
+                c.play()
+            }
         }
     }
 
@@ -151,6 +176,10 @@ class PlaybackConnection(private val context: Context) {
         controller?.seekTo(index, 0L)
     }
 
+    fun clearError() {
+        _state.update { it.copy(errorMessage = null) }
+    }
+
     fun release() {
         positionJob?.cancel()
         controller?.removeListener(playerListener)
@@ -220,4 +249,19 @@ class PlaybackConnection(private val context: Context) {
             controller?.replaceMediaItem(index, item.buildUpon().setMediaMetadata(updatedMetadata).build())
         }
     }
+}
+
+private fun PlaybackException.toUserMessage(songTitle: String?): String {
+    val prefix = songTitle?.takeIf { it.isNotBlank() }?.let { "\"$it\": " } ?: ""
+    val reason = when (errorCode) {
+        PlaybackException.ERROR_CODE_IO_FILE_NOT_FOUND -> "no se encuentra el archivo"
+        PlaybackException.ERROR_CODE_IO_NO_PERMISSION -> "sin permiso para acceder al archivo"
+        PlaybackException.ERROR_CODE_PARSING_CONTAINER_MALFORMED,
+        PlaybackException.ERROR_CODE_PARSING_MANIFEST_MALFORMED,
+        PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED -> "el archivo está dañado o no es compatible"
+        PlaybackException.ERROR_CODE_DECODER_INIT_FAILED,
+        PlaybackException.ERROR_CODE_DECODING_FAILED -> "no se pudo decodificar el audio"
+        else -> "no se pudo reproducir"
+    }
+    return "$prefix$reason"
 }

@@ -105,6 +105,15 @@ PlaylistRepository (Room: favorites +     (ui/screens, via ui/navigation/NavGrap
   Known v1 simplification: the queue list (`queueMediaIds`) reflects playlist/index order, not
   the shuffled play order — Media3 applies shuffle to next/previous navigation, not to what
   `getMediaItemAt(index)` returns.
+- **`player/PlaybackConnection` error handling** — `Player.Listener.onPlayerError` translates
+  `PlaybackException.errorCode` into a short Spanish message (`toUserMessage`) and publishes it as
+  `PlaybackUiState.errorMessage`. Recovery is automatic, not just a notice: if there's a next item
+  (`hasNextMediaItem()`), it auto-skips (`seekToNextMediaItem` + `prepare` + `play`) so one corrupt
+  file doesn't kill the whole session. A private `consecutiveErrorCount` (reset on
+  `onIsPlayingChanged(true)`) caps this at `MAX_CONSECUTIVE_ERRORS = 3`; past that it stops
+  auto-skipping and shows a distinct "several tracks failed" message instead of looping through a
+  fully-broken queue. `MusicViewModel.clearPlaybackError()` / `PlaybackConnection.clearError()`
+  reset `errorMessage` back to `null` once shown.
 - **`viewmodel/MusicViewModel`** — combines `MediaRepository.songs` + `PlaybackConnection.state`
   + a `searchQuery` `StateFlow<String>` into one `MusicUiState` (also derives `currentSong` and
   `queue: List<Song>` by mapping `PlaybackUiState.queueMediaIds` back to `Song` via the
@@ -129,6 +138,10 @@ PlaylistRepository (Room: favorites +     (ui/screens, via ui/navigation/NavGrap
   `READ_MEDIA_AUDIO` on API 33+, `READ_EXTERNAL_STORAGE` below that (declared in the manifest
   with `android:maxSdkVersion="32"`). `MainActivity` gates the whole `NavGraph` behind this
   permission state.
+- **`MainActivity` global `SnackbarHost`** — a single `SnackbarHostState` lives in the `Scaffold`
+  wrapping `NavGraph`, not per-screen: playback errors are Service-level events that can happen on
+  any screen (e.g. an auto-skip while browsing the library), so there's one `LaunchedEffect`
+  keyed on `uiState.playback.errorMessage` instead of duplicating that logic in every screen.
 
 ### Gradle version catalog
 

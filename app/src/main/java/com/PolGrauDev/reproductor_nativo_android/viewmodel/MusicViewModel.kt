@@ -135,6 +135,8 @@ class MusicViewModel(
 
     fun playQueueItem(index: Int) = playbackConnection.playQueueItem(index)
 
+    fun clearPlaybackError() = playbackConnection.clearError()
+
     fun toggleFavorite(songId: Long) {
         val isFavorite = songId in uiState.value.favoriteSongIds
         viewModelScope.launch { playlistRepository.setFavorite(songId, !isFavorite) }
