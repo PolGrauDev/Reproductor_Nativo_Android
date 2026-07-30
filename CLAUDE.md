@@ -69,11 +69,24 @@ PlaylistRepository (Room: favorites +     (ui/screens, via ui/navigation/NavGrap
    playlists) ─────────────────────────────────┘
 ```
 
-- **`data/MediaRepository`** — queries `MediaStore.Audio.Media` once (`IS_MUSIC != 0`), caches
-  the result in a `StateFlow<List<Song>>`. Library refresh is scan-on-demand only; there is no
-  `ContentObserver`-based live refresh (known, deliberate gap). `Song` carries both `albumId` and
-  `artistId` (not just the display strings) so grouping is done by stable MediaStore ID, not by
-  name — avoids merging differently-tagged songs that happen to share a misspelled artist string.
+- **`data/MediaRepository`** — queries `MediaStore.Audio.Media` once (`IS_MUSIC != 0`) via
+  `scanLibrary()`, caching the result in a `StateFlow<List<Song>>`. `Song` carries both `albumId`
+  and `artistId` (not just the display strings) so grouping is done by stable MediaStore ID, not
+  by name — avoids merging differently-tagged songs that happen to share a misspelled artist
+  string. Stays live after that: a `ContentObserver` on `MediaStore.Audio.Media.EXTERNAL_CONTENT_URI`
+  (registered once in `init`, never explicitly unregistered — the repository is an `App`-scoped
+  singleton with no teardown hook) feeds a `MutableSharedFlow` debounced 800ms
+  (`REFRESH_DEBOUNCE_MS`) before re-querying, so a single file operation (which MediaStore's
+  scanner can report as several separate `onChange()` calls) triggers at most one re-scan. Each
+  debounced refresh checks `ContextCompat.checkSelfPermission(...) == PERMISSION_GRANTED`
+  (`ui/permissions/AudioPermissionState.kt`'s `audioPermission`) before querying — the observer can
+  register before the user has granted the permission, and querying without it would otherwise
+  wipe `_songs` to an empty list. `MusicViewModel.refreshLibrary()` (called from `MainActivity`'s
+  `AudioLibraryGate` when `AudioPermissionStatus` transitions to `Granted`) closes a related gap:
+  the ViewModel's own initial `scanLibrary()` call in `init` runs as soon as the Activity composes,
+  which can race ahead of the user actually granting the permission on first install or after a
+  revoke — without the extra rescan-on-grant, the library would stay empty until some unrelated
+  MediaStore change happened to fire the observer.
 - **`data/model/AlbumGroup` / `ArtistGroup`** (`toAlbumGroups()` / `toArtistGroups()` extensions
   on `List<Song>`) — pure in-memory `groupBy` derivations, no separate data source. Computed as
   part of `MusicUiState` (`albums`, `artists`), sourced from `filteredSongs` so the library

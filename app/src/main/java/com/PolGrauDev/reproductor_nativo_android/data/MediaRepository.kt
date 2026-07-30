@@ -2,28 +2,76 @@ package com.PolGrauDev.reproductor_nativo_android.data
 
 import android.content.ContentUris
 import android.content.Context
+import android.content.pm.PackageManager
+import android.database.ContentObserver
+import android.os.Handler
+import android.os.Looper
 import android.provider.MediaStore
+import androidx.core.content.ContextCompat
 import com.PolGrauDev.reproductor_nativo_android.data.model.Song
+import com.PolGrauDev.reproductor_nativo_android.ui.permissions.audioPermission
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+
+private const val REFRESH_DEBOUNCE_MS = 800L
 
 /**
  * Fuente de verdad de la biblioteca de canciones del dispositivo.
- * Escanea [MediaStore.Audio.Media] una vez y cachea el resultado en memoria.
+ * Escanea [MediaStore.Audio.Media] una vez y cachea el resultado en memoria; después se mantiene
+ * al día sola vía [ContentObserver] mientras la app sigue abierta (altas/bajas/ediciones en la
+ * librería de audio del dispositivo).
  */
+@OptIn(FlowPreview::class)
 class MediaRepository(private val context: Context) {
 
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val _songs = MutableStateFlow<List<Song>>(emptyList())
     val songs: StateFlow<List<Song>> = _songs.asStateFlow()
+
+    private val refreshRequests = MutableSharedFlow<Unit>(
+        extraBufferCapacity = 1,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST,
+    )
+
+    private val observer = object : ContentObserver(Handler(Looper.getMainLooper())) {
+        override fun onChange(selfChange: Boolean) {
+            refreshRequests.tryEmit(Unit)
+        }
+    }
+
+    init {
+        context.contentResolver.registerContentObserver(
+            MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+            true,
+            observer,
+        )
+        scope.launch {
+            refreshRequests.debounce(REFRESH_DEBOUNCE_MS).collect {
+                if (hasAudioPermission()) {
+                    _songs.value = queryMediaStore()
+                }
+            }
+        }
+    }
 
     suspend fun scanLibrary(): List<Song> = withContext(Dispatchers.IO) {
         val result = queryMediaStore()
         _songs.value = result
         result
     }
+
+    private fun hasAudioPermission(): Boolean =
+        ContextCompat.checkSelfPermission(context, audioPermission) == PackageManager.PERMISSION_GRANTED
 
     private fun queryMediaStore(): List<Song> {
         val collection = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI

@@ -74,6 +74,12 @@ private fun AudioLibraryGate(viewModel: MusicViewModel, snackbarHostState: Snack
         }
     }
 
+    LaunchedEffect(permissionState.status) {
+        if (permissionState.status == AudioPermissionStatus.Granted) {
+            viewModel.refreshLibrary()
+        }
+    }
+
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     LaunchedEffect(uiState.playback.errorMessage) {
         val message = uiState.playback.errorMessage ?: return@LaunchedEffect
