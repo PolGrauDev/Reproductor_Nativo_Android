@@ -14,6 +14,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Repeat
@@ -66,6 +68,16 @@ fun NowPlayingScreen(viewModel: MusicViewModel, onBack: () -> Unit, onQueueClick
                     }
                 },
                 actions = {
+                    if (song != null) {
+                        val isFavorite = song.id in uiState.favoriteSongIds
+                        IconButton(onClick = { viewModel.toggleFavorite(song.id) }) {
+                            Icon(
+                                if (isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                                contentDescription = if (isFavorite) "Quitar de favoritos" else "Añadir a favoritos",
+                                tint = if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
                     IconButton(onClick = onQueueClick) {
                         Icon(Icons.AutoMirrored.Filled.QueueMusic, contentDescription = "Ver cola")
                     }

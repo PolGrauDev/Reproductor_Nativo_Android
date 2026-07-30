@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.ksp)
 }
 
 android {
@@ -74,4 +75,9 @@ dependencies {
 
     // Navegación entre pantallas
     implementation(libs.androidx.navigation.compose)
+
+    // Persistencia (favoritos y playlists)
+    implementation(libs.room.runtime)
+    implementation(libs.room.ktx)
+    ksp(libs.room.compiler)
 }

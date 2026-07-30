@@ -63,8 +63,10 @@ PlaybackConnection (MediaController)┘        │
         │                                    │
         ▼                                    ▼
 PlaybackService (MediaSessionService +  LibraryScreen / AlbumDetailScreen / ArtistDetailScreen /
-   ExoPlayer + MediaSession)              NowPlayingScreen / QueueScreen
-                                           (ui/screens, via ui/navigation/NavGraph)
+   ExoPlayer + MediaSession)              NowPlayingScreen / QueueScreen / FavoritesScreen /
+                                           PlaylistDetailScreen
+PlaylistRepository (Room: favorites +     (ui/screens, via ui/navigation/NavGraph)
+   playlists) ─────────────────────────────────┘
 ```
 
 - **`data/MediaRepository`** — queries `MediaStore.Audio.Media` once (`IS_MUSIC != 0`), caches
@@ -111,6 +113,18 @@ PlaybackService (MediaSessionService +  LibraryScreen / AlbumDetailScreen / Arti
   takes an optional queue scope — `AlbumDetailScreen`/`ArtistDetailScreen` pass the group's own
   song list so playing from a group's detail screen queues just that group, not the whole
   library.
+- **`data/db/` (Room) + `data/PlaylistRepository`** — the only persistence layer in the app;
+  everything else is either derived from `MediaStore` or lives only in the `Player`/in-memory.
+  Two tables: `favorites` (just `songId` + timestamp) and `playlists` +
+  `playlist_song_cross_ref` (has a `position` column for manual ordering, reassigned in full on
+  every move rather than swapped — see `PlaylistRepository.moveSong`). Both tables store only
+  `Song.id`; metadata is resolved against `MediaRepository.songs` in memory, same pattern as the
+  playback queue. Uses KSP (not kapt) for the Room annotation processor.
+- **`viewmodel/MusicViewModel.playlistSongsFlow(playlistId)`** — the one piece of UI state that
+  is *not* folded into `MusicUiState`, because it's parameterized per-playlist.
+  `PlaylistDetailScreen` collects it directly via
+  `remember(playlistId) { viewModel.playlistSongsFlow(playlistId) }`. Favorites, by contrast,
+  *is* in `MusicUiState` (`favoriteSongIds`/`favoriteSongs`) since there's only ever one.
 - **`ui/permissions/AudioPermissionState`** — required-permission choice is SDK-gated:
   `READ_MEDIA_AUDIO` on API 33+, `READ_EXTERNAL_STORAGE` below that (declared in the manifest
   with `android:maxSdkVersion="32"`). `MainActivity` gates the whole `NavGraph` behind this

@@ -4,13 +4,16 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.PolGrauDev.reproductor_nativo_android.data.MediaRepository
+import com.PolGrauDev.reproductor_nativo_android.data.PlaylistRepository
 import com.PolGrauDev.reproductor_nativo_android.data.model.AlbumGroup
 import com.PolGrauDev.reproductor_nativo_android.data.model.ArtistGroup
+import com.PolGrauDev.reproductor_nativo_android.data.model.PlaylistSummary
 import com.PolGrauDev.reproductor_nativo_android.data.model.Song
 import com.PolGrauDev.reproductor_nativo_android.data.model.toAlbumGroups
 import com.PolGrauDev.reproductor_nativo_android.data.model.toArtistGroups
 import com.PolGrauDev.reproductor_nativo_android.player.PlaybackConnection
 import com.PolGrauDev.reproductor_nativo_android.player.PlaybackUiState
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -23,6 +26,8 @@ data class MusicUiState(
     val isLoadingLibrary: Boolean = true,
     val playback: PlaybackUiState = PlaybackUiState(),
     val searchQuery: String = "",
+    val favoriteSongIds: Set<Long> = emptySet(),
+    val playlists: List<PlaylistSummary> = emptyList(),
 ) {
     val currentSong: Song?
         get() = songs.firstOrNull { it.id.toString() == playback.currentMediaId }
@@ -49,7 +54,15 @@ data class MusicUiState(
 
     val artists: List<ArtistGroup>
         get() = filteredSongs.toArtistGroups()
+
+    val favoriteSongs: List<Song>
+        get() = songs.filter { it.id in favoriteSongIds }
 }
+
+private data class LibraryExtras(
+    val favoriteSongIds: Set<Long>,
+    val playlists: List<PlaylistSummary>,
+)
 
 /**
  * Conecta [MediaRepository] (biblioteca) y [PlaybackConnection] (estado de reproducción,
@@ -57,6 +70,7 @@ data class MusicUiState(
  */
 class MusicViewModel(
     private val repository: MediaRepository,
+    private val playlistRepository: PlaylistRepository,
     applicationContext: Context,
 ) : ViewModel() {
 
@@ -64,13 +78,26 @@ class MusicViewModel(
     private val isLoadingLibrary = MutableStateFlow(true)
     private val searchQuery = MutableStateFlow("")
 
+    private val libraryExtras = combine(
+        playlistRepository.favoriteSongIds,
+        playlistRepository.playlists,
+    ) { favoriteIds, playlists -> LibraryExtras(favoriteIds.toSet(), playlists) }
+
     val uiState: StateFlow<MusicUiState> = combine(
         repository.songs,
         playbackConnection.state,
         isLoadingLibrary,
         searchQuery,
-    ) { songs, playback, loading, query ->
-        MusicUiState(songs = songs, isLoadingLibrary = loading, playback = playback, searchQuery = query)
+        libraryExtras,
+    ) { songs, playback, loading, query, extras ->
+        MusicUiState(
+            songs = songs,
+            isLoadingLibrary = loading,
+            playback = playback,
+            searchQuery = query,
+            favoriteSongIds = extras.favoriteSongIds,
+            playlists = extras.playlists,
+        )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), MusicUiState())
 
     init {
@@ -107,6 +134,58 @@ class MusicViewModel(
     fun removeFromQueue(index: Int) = playbackConnection.removeQueueItem(index)
 
     fun playQueueItem(index: Int) = playbackConnection.playQueueItem(index)
+
+    fun toggleFavorite(songId: Long) {
+        val isFavorite = songId in uiState.value.favoriteSongIds
+        viewModelScope.launch { playlistRepository.setFavorite(songId, !isFavorite) }
+    }
+
+    fun createPlaylist(name: String) {
+        if (name.isBlank()) return
+        viewModelScope.launch { playlistRepository.createPlaylist(name.trim()) }
+    }
+
+    /** Crea la playlist y añade [songId] de una vez — usado desde el diálogo "Añadir a playlist". */
+    fun createPlaylistAndAddSong(name: String, songId: Long) {
+        if (name.isBlank()) return
+        viewModelScope.launch {
+            val playlistId = playlistRepository.createPlaylist(name.trim())
+            playlistRepository.addSongToPlaylist(playlistId, songId)
+        }
+    }
+
+    fun deletePlaylist(playlistId: Long) {
+        viewModelScope.launch { playlistRepository.deletePlaylist(playlistId) }
+    }
+
+    fun renamePlaylist(playlistId: Long, name: String) {
+        if (name.isBlank()) return
+        viewModelScope.launch { playlistRepository.renamePlaylist(playlistId, name.trim()) }
+    }
+
+    fun addSongToPlaylist(playlistId: Long, songId: Long) {
+        viewModelScope.launch { playlistRepository.addSongToPlaylist(playlistId, songId) }
+    }
+
+    fun removeSongFromPlaylist(playlistId: Long, songId: Long) {
+        viewModelScope.launch { playlistRepository.removeSongFromPlaylist(playlistId, songId) }
+    }
+
+    fun moveSongInPlaylist(playlistId: Long, songIds: List<Long>, from: Int, to: Int) {
+        viewModelScope.launch { playlistRepository.moveSong(playlistId, songIds, from, to) }
+    }
+
+    /**
+     * Colectado directamente por la pantalla de detalle de playlist; no vive en [MusicUiState]
+     * porque está parametrizado por playlist.
+     */
+    fun playlistSongsFlow(playlistId: Long): Flow<List<Song>> = combine(
+        repository.songs,
+        playlistRepository.observeSongIds(playlistId),
+    ) { songs, songIds ->
+        val byId = songs.associateBy { it.id }
+        songIds.mapNotNull { byId[it] }
+    }
 
     override fun onCleared() {
         playbackConnection.release()

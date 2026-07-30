@@ -10,6 +10,6 @@ class MusicViewModelFactory(private val app: App) : ViewModelProvider.Factory {
         require(modelClass.isAssignableFrom(MusicViewModel::class.java)) {
             "Unknown ViewModel class: $modelClass"
         }
-        return MusicViewModel(app.mediaRepository, app.applicationContext) as T
+        return MusicViewModel(app.mediaRepository, app.playlistRepository, app.applicationContext) as T
     }
 }

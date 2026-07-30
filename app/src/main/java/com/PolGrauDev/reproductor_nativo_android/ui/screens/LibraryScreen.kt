@@ -16,10 +16,16 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
+import androidx.compose.material.icons.automirrored.filled.QueueMusic
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -30,10 +36,13 @@ import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -46,11 +55,13 @@ import coil3.compose.AsyncImage
 import com.PolGrauDev.reproductor_nativo_android.data.AlbumArtRequest
 import com.PolGrauDev.reproductor_nativo_android.data.model.AlbumGroup
 import com.PolGrauDev.reproductor_nativo_android.data.model.ArtistGroup
+import com.PolGrauDev.reproductor_nativo_android.data.model.PlaylistSummary
 import com.PolGrauDev.reproductor_nativo_android.data.model.Song
+import com.PolGrauDev.reproductor_nativo_android.ui.components.AddToPlaylistDialog
 import com.PolGrauDev.reproductor_nativo_android.viewmodel.MusicUiState
 import com.PolGrauDev.reproductor_nativo_android.viewmodel.MusicViewModel
 
-private val TABS = listOf("Canciones", "Álbumes", "Artistas")
+private val TABS = listOf("Canciones", "Álbumes", "Artistas", "Playlists")
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -59,9 +70,12 @@ fun LibraryScreen(
     onSongClick: () -> Unit,
     onAlbumClick: (AlbumGroup) -> Unit,
     onArtistClick: (ArtistGroup) -> Unit,
+    onFavoritesClick: () -> Unit,
+    onPlaylistClick: (Long) -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
+    var songForPlaylistDialog by remember { mutableStateOf<Song?>(null) }
 
     Scaffold(topBar = { TopAppBar(title = { Text("Biblioteca") }) }) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
@@ -95,16 +109,43 @@ fun LibraryScreen(
 
             when {
                 uiState.isLoadingLibrary -> LoadingOrEmpty { CircularProgressIndicator() }
-                uiState.songs.isEmpty() -> LoadingOrEmpty {
+                uiState.songs.isEmpty() && selectedTab != 3 -> LoadingOrEmpty {
                     Text("No se encontraron canciones en el dispositivo")
                 }
                 else -> when (selectedTab) {
-                    0 -> SongsTab(uiState, onClick = { song -> viewModel.playSong(song); onSongClick() })
+                    0 -> SongsTab(
+                        uiState = uiState,
+                        onClick = { song -> viewModel.playSong(song); onSongClick() },
+                        onToggleFavorite = viewModel::toggleFavorite,
+                        onAddToPlaylist = { song -> songForPlaylistDialog = song },
+                    )
                     1 -> AlbumsTab(uiState.albums, onAlbumClick)
-                    else -> ArtistsTab(uiState.artists, onArtistClick)
+                    2 -> ArtistsTab(uiState.artists, onArtistClick)
+                    else -> PlaylistsTab(
+                        playlists = uiState.playlists,
+                        favoriteCount = uiState.favoriteSongIds.size,
+                        onFavoritesClick = onFavoritesClick,
+                        onPlaylistClick = onPlaylistClick,
+                        onCreatePlaylist = viewModel::createPlaylist,
+                    )
                 }
             }
         }
+    }
+
+    songForPlaylistDialog?.let { song ->
+        AddToPlaylistDialog(
+            playlists = uiState.playlists,
+            onDismiss = { songForPlaylistDialog = null },
+            onPlaylistSelected = { playlistId ->
+                viewModel.addSongToPlaylist(playlistId, song.id)
+                songForPlaylistDialog = null
+            },
+            onCreatePlaylist = { name ->
+                viewModel.createPlaylistAndAddSong(name, song.id)
+                songForPlaylistDialog = null
+            },
+        )
     }
 }
 
@@ -114,7 +155,12 @@ private fun LoadingOrEmpty(content: @Composable () -> Unit) {
 }
 
 @Composable
-private fun SongsTab(uiState: MusicUiState, onClick: (Song) -> Unit) {
+private fun SongsTab(
+    uiState: MusicUiState,
+    onClick: (Song) -> Unit,
+    onToggleFavorite: (Long) -> Unit,
+    onAddToPlaylist: (Song) -> Unit,
+) {
     val songs = uiState.filteredSongs
     if (songs.isEmpty()) {
         LoadingOrEmpty { Text("Sin resultados") }
@@ -125,10 +171,137 @@ private fun SongsTab(uiState: MusicUiState, onClick: (Song) -> Unit) {
             SongRow(
                 song = song,
                 isPlaying = uiState.currentSong?.id == song.id && uiState.playback.isPlaying,
+                isFavorite = song.id in uiState.favoriteSongIds,
                 onClick = { onClick(song) },
+                onToggleFavorite = { onToggleFavorite(song.id) },
+                onAddToPlaylist = { onAddToPlaylist(song) },
             )
         }
     }
+}
+
+@Composable
+private fun PlaylistsTab(
+    playlists: List<PlaylistSummary>,
+    favoriteCount: Int,
+    onFavoritesClick: () -> Unit,
+    onPlaylistClick: (Long) -> Unit,
+    onCreatePlaylist: (String) -> Unit,
+) {
+    var showCreateDialog by remember { mutableStateOf(false) }
+
+    LazyColumn(modifier = Modifier.fillMaxSize()) {
+        item {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onFavoritesClick)
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        Icons.Filled.Favorite,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                }
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text("Favoritos", style = MaterialTheme.typography.bodyLarge)
+                    Text(
+                        "$favoriteCount canciones",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+        items(playlists, key = { it.id }) { playlist ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onPlaylistClick(playlist.id) }
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.QueueMusic,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(playlist.name, style = MaterialTheme.typography.bodyLarge, maxLines = 1)
+                    Text(
+                        "${playlist.songCount} canciones",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+        item {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { showCreateDialog = true }
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(Icons.Filled.Add, contentDescription = null)
+                Spacer(Modifier.width(12.dp))
+                Text("Nueva playlist")
+            }
+        }
+    }
+
+    if (showCreateDialog) {
+        CreatePlaylistDialog(
+            onDismiss = { showCreateDialog = false },
+            onConfirm = { name ->
+                onCreatePlaylist(name)
+                showCreateDialog = false
+            },
+        )
+    }
+}
+
+@Composable
+private fun CreatePlaylistDialog(onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
+    var name by remember { mutableStateOf("") }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Nueva playlist") },
+        text = {
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(name) }, enabled = name.isNotBlank()) { Text("Crear") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancelar") }
+        },
+    )
 }
 
 @Composable
@@ -158,12 +331,19 @@ private fun ArtistsTab(artists: List<ArtistGroup>, onClick: (ArtistGroup) -> Uni
 }
 
 @Composable
-private fun SongRow(song: Song, isPlaying: Boolean, onClick: () -> Unit) {
+private fun SongRow(
+    song: Song,
+    isPlaying: Boolean,
+    isFavorite: Boolean,
+    onClick: () -> Unit,
+    onToggleFavorite: () -> Unit,
+    onAddToPlaylist: () -> Unit,
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(horizontal = 8.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         AsyncImage(
@@ -184,6 +364,16 @@ private fun SongRow(song: Song, isPlaying: Boolean, onClick: () -> Unit) {
         }
         if (isPlaying) {
             Icon(Icons.Filled.MusicNote, contentDescription = "Reproduciendo")
+        }
+        IconButton(onClick = onToggleFavorite) {
+            Icon(
+                if (isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                contentDescription = if (isFavorite) "Quitar de favoritos" else "Añadir a favoritos",
+                tint = if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        IconButton(onClick = onAddToPlaylist) {
+            Icon(Icons.AutoMirrored.Filled.PlaylistAdd, contentDescription = "Añadir a playlist")
         }
     }
 }
