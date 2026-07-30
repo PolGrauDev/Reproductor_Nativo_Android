@@ -12,4 +12,6 @@ data class Song(
     val albumId: Long?,
     val artistId: Long?,
     val contentUri: Uri,
+    val filePath: String,
+    val dateAddedSec: Long,
 )

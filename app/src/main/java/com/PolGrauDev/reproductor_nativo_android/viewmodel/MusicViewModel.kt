@@ -7,10 +7,13 @@ import com.PolGrauDev.reproductor_nativo_android.data.MediaRepository
 import com.PolGrauDev.reproductor_nativo_android.data.PlaylistRepository
 import com.PolGrauDev.reproductor_nativo_android.data.model.AlbumGroup
 import com.PolGrauDev.reproductor_nativo_android.data.model.ArtistGroup
+import com.PolGrauDev.reproductor_nativo_android.data.model.FolderGroup
 import com.PolGrauDev.reproductor_nativo_android.data.model.PlaylistSummary
 import com.PolGrauDev.reproductor_nativo_android.data.model.Song
+import com.PolGrauDev.reproductor_nativo_android.data.model.SortOrder
 import com.PolGrauDev.reproductor_nativo_android.data.model.toAlbumGroups
 import com.PolGrauDev.reproductor_nativo_android.data.model.toArtistGroups
+import com.PolGrauDev.reproductor_nativo_android.data.model.toFolderGroups
 import com.PolGrauDev.reproductor_nativo_android.player.PlaybackConnection
 import com.PolGrauDev.reproductor_nativo_android.player.PlaybackUiState
 import kotlinx.coroutines.flow.Flow
@@ -28,6 +31,7 @@ data class MusicUiState(
     val searchQuery: String = "",
     val favoriteSongIds: Set<Long> = emptySet(),
     val playlists: List<PlaylistSummary> = emptyList(),
+    val sortOrder: SortOrder = SortOrder.TITLE,
 ) {
     val currentSong: Song?
         get() = songs.firstOrNull { it.id.toString() == playback.currentMediaId }
@@ -39,13 +43,20 @@ data class MusicUiState(
         }
 
     val filteredSongs: List<Song>
-        get() = if (searchQuery.isBlank()) {
-            songs
-        } else {
-            songs.filter {
-                it.title.contains(searchQuery, ignoreCase = true) ||
-                    it.artist.contains(searchQuery, ignoreCase = true) ||
-                    it.album.contains(searchQuery, ignoreCase = true)
+        get() {
+            val matching = if (searchQuery.isBlank()) {
+                songs
+            } else {
+                songs.filter {
+                    it.title.contains(searchQuery, ignoreCase = true) ||
+                        it.artist.contains(searchQuery, ignoreCase = true) ||
+                        it.album.contains(searchQuery, ignoreCase = true)
+                }
+            }
+            return when (sortOrder) {
+                SortOrder.TITLE -> matching.sortedBy { it.title }
+                SortOrder.DATE_ADDED -> matching.sortedByDescending { it.dateAddedSec }
+                SortOrder.DURATION -> matching.sortedByDescending { it.durationMs }
             }
         }
 
@@ -55,6 +66,9 @@ data class MusicUiState(
     val artists: List<ArtistGroup>
         get() = filteredSongs.toArtistGroups()
 
+    val folders: List<FolderGroup>
+        get() = filteredSongs.toFolderGroups()
+
     val favoriteSongs: List<Song>
         get() = songs.filter { it.id in favoriteSongIds }
 }
@@ -62,6 +76,7 @@ data class MusicUiState(
 private data class LibraryExtras(
     val favoriteSongIds: Set<Long>,
     val playlists: List<PlaylistSummary>,
+    val sortOrder: SortOrder,
 )
 
 /**
@@ -77,11 +92,13 @@ class MusicViewModel(
     private val playbackConnection = PlaybackConnection(applicationContext)
     private val isLoadingLibrary = MutableStateFlow(true)
     private val searchQuery = MutableStateFlow("")
+    private val sortOrder = MutableStateFlow(SortOrder.TITLE)
 
     private val libraryExtras = combine(
         playlistRepository.favoriteSongIds,
         playlistRepository.playlists,
-    ) { favoriteIds, playlists -> LibraryExtras(favoriteIds.toSet(), playlists) }
+        sortOrder,
+    ) { favoriteIds, playlists, order -> LibraryExtras(favoriteIds.toSet(), playlists, order) }
 
     val uiState: StateFlow<MusicUiState> = combine(
         repository.songs,
@@ -97,6 +114,7 @@ class MusicViewModel(
             searchQuery = query,
             favoriteSongIds = extras.favoriteSongIds,
             playlists = extras.playlists,
+            sortOrder = extras.sortOrder,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), MusicUiState())
 
@@ -115,6 +133,10 @@ class MusicViewModel(
 
     fun setSearchQuery(query: String) {
         searchQuery.value = query
+    }
+
+    fun setSortOrder(order: SortOrder) {
+        sortOrder.value = order
     }
 
     fun togglePlayPause() = playbackConnection.togglePlayPause()

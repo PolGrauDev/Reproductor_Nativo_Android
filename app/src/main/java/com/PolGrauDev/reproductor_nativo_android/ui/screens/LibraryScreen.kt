@@ -18,15 +18,20 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
+import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -55,13 +60,15 @@ import coil3.compose.AsyncImage
 import com.PolGrauDev.reproductor_nativo_android.data.AlbumArtRequest
 import com.PolGrauDev.reproductor_nativo_android.data.model.AlbumGroup
 import com.PolGrauDev.reproductor_nativo_android.data.model.ArtistGroup
+import com.PolGrauDev.reproductor_nativo_android.data.model.FolderGroup
 import com.PolGrauDev.reproductor_nativo_android.data.model.PlaylistSummary
 import com.PolGrauDev.reproductor_nativo_android.data.model.Song
+import com.PolGrauDev.reproductor_nativo_android.data.model.SortOrder
 import com.PolGrauDev.reproductor_nativo_android.ui.components.AddToPlaylistDialog
 import com.PolGrauDev.reproductor_nativo_android.viewmodel.MusicUiState
 import com.PolGrauDev.reproductor_nativo_android.viewmodel.MusicViewModel
 
-private val TABS = listOf("Canciones", "Álbumes", "Artistas", "Playlists")
+private val TABS = listOf("Canciones", "Álbumes", "Artistas", "Carpetas", "Playlists")
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -70,6 +77,7 @@ fun LibraryScreen(
     onSongClick: () -> Unit,
     onAlbumClick: (AlbumGroup) -> Unit,
     onArtistClick: (ArtistGroup) -> Unit,
+    onFolderClick: (FolderGroup) -> Unit,
     onFavoritesClick: () -> Unit,
     onPlaylistClick: (Long) -> Unit,
 ) {
@@ -77,7 +85,14 @@ fun LibraryScreen(
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
     var songForPlaylistDialog by remember { mutableStateOf<Song?>(null) }
 
-    Scaffold(topBar = { TopAppBar(title = { Text("Biblioteca") }) }) { padding ->
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Biblioteca") },
+                actions = { SortMenu(current = uiState.sortOrder, onSelect = viewModel::setSortOrder) },
+            )
+        },
+    ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
             OutlinedTextField(
                 value = uiState.searchQuery,
@@ -109,7 +124,7 @@ fun LibraryScreen(
 
             when {
                 uiState.isLoadingLibrary -> LoadingOrEmpty { CircularProgressIndicator() }
-                uiState.songs.isEmpty() && selectedTab != 3 -> LoadingOrEmpty {
+                uiState.songs.isEmpty() && selectedTab != 4 -> LoadingOrEmpty {
                     Text("No se encontraron canciones en el dispositivo")
                 }
                 else -> when (selectedTab) {
@@ -121,6 +136,7 @@ fun LibraryScreen(
                     )
                     1 -> AlbumsTab(uiState.albums, onAlbumClick)
                     2 -> ArtistsTab(uiState.artists, onArtistClick)
+                    3 -> FoldersTab(uiState.folders, onFolderClick)
                     else -> PlaylistsTab(
                         playlists = uiState.playlists,
                         favoriteCount = uiState.favoriteSongIds.size,
@@ -152,6 +168,32 @@ fun LibraryScreen(
 @Composable
 private fun LoadingOrEmpty(content: @Composable () -> Unit) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { content() }
+}
+
+@Composable
+private fun SortMenu(current: SortOrder, onSelect: (SortOrder) -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+    Box {
+        IconButton(onClick = { expanded = true }) {
+            Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = "Ordenar canciones")
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            SortOrder.entries.forEach { order ->
+                DropdownMenuItem(
+                    text = { Text(order.label) },
+                    onClick = {
+                        onSelect(order)
+                        expanded = false
+                    },
+                    leadingIcon = {
+                        if (order == current) {
+                            Icon(Icons.Filled.Check, contentDescription = null)
+                        }
+                    },
+                )
+            }
+        }
+    }
 }
 
 @Composable
@@ -326,6 +368,50 @@ private fun ArtistsTab(artists: List<ArtistGroup>, onClick: (ArtistGroup) -> Uni
     LazyColumn(modifier = Modifier.fillMaxSize()) {
         items(artists, key = { it.artistId ?: -1L }) { artist ->
             ArtistRow(artist = artist, onClick = { onClick(artist) })
+        }
+    }
+}
+
+@Composable
+private fun FoldersTab(folders: List<FolderGroup>, onClick: (FolderGroup) -> Unit) {
+    if (folders.isEmpty()) {
+        LoadingOrEmpty { Text("Sin resultados") }
+        return
+    }
+    LazyColumn(modifier = Modifier.fillMaxSize()) {
+        items(folders, key = { it.path }) { folder ->
+            FolderRow(folder = folder, onClick = { onClick(folder) })
+        }
+    }
+}
+
+@Composable
+private fun FolderRow(folder: FolderGroup, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(48.dp)
+                .clip(RoundedCornerShape(4.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(Icons.Filled.Folder, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text(folder.name, style = MaterialTheme.typography.bodyLarge, maxLines = 1)
+            Text(
+                "${folder.songs.size} canciones",
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 1,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }

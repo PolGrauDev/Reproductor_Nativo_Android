@@ -87,10 +87,22 @@ PlaylistRepository (Room: favorites +     (ui/screens, via ui/navigation/NavGrap
   which can race ahead of the user actually granting the permission on first install or after a
   revoke — without the extra rescan-on-grant, the library would stay empty until some unrelated
   MediaStore change happened to fire the observer.
-- **`data/model/AlbumGroup` / `ArtistGroup`** (`toAlbumGroups()` / `toArtistGroups()` extensions
-  on `List<Song>`) — pure in-memory `groupBy` derivations, no separate data source. Computed as
-  part of `MusicUiState` (`albums`, `artists`), sourced from `filteredSongs` so the library
-  search box filters all three tabs (songs/albums/artists) consistently.
+- **`data/model/AlbumGroup` / `ArtistGroup` / `FolderGroup`** (`toAlbumGroups()` /
+  `toArtistGroups()` / `toFolderGroups()` extensions on `List<Song>`) — pure in-memory `groupBy`
+  derivations, no separate data source. Computed as part of `MusicUiState` (`albums`, `artists`,
+  `folders`), sourced from `filteredSongs` so the library search box filters all four tabs
+  (songs/albums/artists/folders) consistently. `FolderGroup` groups by `Song.filePath`'s parent
+  directory (`substringBeforeLast('/')`) rather than `MediaStore.RELATIVE_PATH`, since that column
+  only exists from API 29+ and `minSdk` is 24 — `Song.filePath` comes from the older but
+  universally-available `MediaStore.Audio.Media.DATA` column, used here only to derive a display
+  name, never to open the file directly. A folder's identity is its full path (a `String`, unlike
+  the stable MediaStore `Long` IDs album/artist have), so `Routes.folderDetail()` passes it through
+  `Uri.encode`/`Uri.decode` rather than inventing a numeric ID scheme.
+- **`data/model/SortOrder`** — `MusicUiState.filteredSongs` applies the user-selected sort
+  (title/date-added/duration, picked from a `DropdownMenu` in `LibraryScreen`'s `TopAppBar`) after
+  the search filter. Deliberately scoped to the flat "Canciones" tab only — Álbumes/Artistas/Carpetas
+  keep their own fixed alphabetical-by-group-name order (`sortedBy` inside their own
+  `toXGroups()`), since "ordenar por duración" doesn't mean anything for a list of albums.
 - **`data/AlbumArtExtractor`** — the *only* place that calls
   `MediaMetadataRetriever.getEmbeddedPicture()`. Shared by both the Coil fetcher and
   `PlaybackConnection` so a song's embedded art is never extracted twice.

@@ -1,5 +1,6 @@
 package com.PolGrauDev.reproductor_nativo_android.ui.navigation
 
+import android.net.Uri
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -10,6 +11,7 @@ import androidx.navigation.navArgument
 import com.PolGrauDev.reproductor_nativo_android.ui.screens.AlbumDetailScreen
 import com.PolGrauDev.reproductor_nativo_android.ui.screens.ArtistDetailScreen
 import com.PolGrauDev.reproductor_nativo_android.ui.screens.FavoritesScreen
+import com.PolGrauDev.reproductor_nativo_android.ui.screens.FolderDetailScreen
 import com.PolGrauDev.reproductor_nativo_android.ui.screens.LibraryScreen
 import com.PolGrauDev.reproductor_nativo_android.ui.screens.NowPlayingScreen
 import com.PolGrauDev.reproductor_nativo_android.ui.screens.PlaylistDetailScreen
@@ -24,11 +26,13 @@ object Routes {
     const val QUEUE = "queue"
     const val ALBUM_DETAIL = "albumDetail/{albumId}"
     const val ARTIST_DETAIL = "artistDetail/{artistId}"
+    const val FOLDER_DETAIL = "folderDetail/{folderPath}"
     const val FAVORITES = "favorites"
     const val PLAYLIST_DETAIL = "playlistDetail/{playlistId}"
 
     fun albumDetail(albumId: Long?) = "albumDetail/${albumId ?: NO_ID}"
     fun artistDetail(artistId: Long?) = "artistDetail/${artistId ?: NO_ID}"
+    fun folderDetail(path: String) = "folderDetail/${Uri.encode(path)}"
     fun playlistDetail(playlistId: Long) = "playlistDetail/$playlistId"
 }
 
@@ -44,6 +48,7 @@ fun NavGraph(
                 onSongClick = { navController.navigate(Routes.NOW_PLAYING) },
                 onAlbumClick = { album -> navController.navigate(Routes.albumDetail(album.albumId)) },
                 onArtistClick = { artist -> navController.navigate(Routes.artistDetail(artist.artistId)) },
+                onFolderClick = { folder -> navController.navigate(Routes.folderDetail(folder.path)) },
                 onFavoritesClick = { navController.navigate(Routes.FAVORITES) },
                 onPlaylistClick = { playlistId -> navController.navigate(Routes.playlistDetail(playlistId)) },
             )
@@ -81,6 +86,18 @@ fun NavGraph(
             ArtistDetailScreen(
                 viewModel = viewModel,
                 artistId = artistId.takeIf { it != NO_ID },
+                onBack = { navController.popBackStack() },
+                onSongClick = { navController.navigate(Routes.NOW_PLAYING) },
+            )
+        }
+        composable(
+            route = Routes.FOLDER_DETAIL,
+            arguments = listOf(navArgument("folderPath") { type = NavType.StringType }),
+        ) { backStackEntry ->
+            val folderPath = Uri.decode(backStackEntry.arguments?.getString("folderPath") ?: "")
+            FolderDetailScreen(
+                viewModel = viewModel,
+                folderPath = folderPath,
                 onBack = { navController.popBackStack() },
                 onSongClick = { navController.navigate(Routes.NOW_PLAYING) },
             )
