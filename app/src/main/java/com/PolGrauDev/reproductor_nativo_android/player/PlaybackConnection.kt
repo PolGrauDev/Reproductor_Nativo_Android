@@ -6,6 +6,7 @@ import androidx.core.content.ContextCompat
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
+import androidx.media3.common.Timeline
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.PolGrauDev.reproductor_nativo_android.data.AlbumArtExtractor
@@ -30,6 +31,10 @@ data class PlaybackUiState(
     val positionMs: Long = 0L,
     val durationMs: Long = 0L,
     val playbackState: Int = Player.STATE_IDLE,
+    val shuffleModeEnabled: Boolean = false,
+    val repeatMode: Int = Player.REPEAT_MODE_OFF,
+    val queueMediaIds: List<String> = emptyList(),
+    val currentIndex: Int = -1,
 )
 
 /**
@@ -57,11 +62,24 @@ class PlaybackConnection(private val context: Context) {
             _state.update {
                 it.copy(currentMediaId = mediaItem?.mediaId, durationMs = safeDuration())
             }
+            refreshQueue()
             enrichCurrentItemArtwork()
         }
 
         override fun onPlaybackStateChanged(playbackState: Int) {
             _state.update { it.copy(playbackState = playbackState, durationMs = safeDuration()) }
+        }
+
+        override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) {
+            _state.update { it.copy(shuffleModeEnabled = shuffleModeEnabled) }
+        }
+
+        override fun onRepeatModeChanged(repeatMode: Int) {
+            _state.update { it.copy(repeatMode = repeatMode) }
+        }
+
+        override fun onTimelineChanged(timeline: Timeline, reason: Int) {
+            refreshQueue()
         }
     }
 
@@ -107,6 +125,32 @@ class PlaybackConnection(private val context: Context) {
         controller?.seekToPreviousMediaItem()
     }
 
+    fun toggleShuffle() {
+        controller?.let { it.shuffleModeEnabled = !it.shuffleModeEnabled }
+    }
+
+    /** Ciclo estándar: sin repetir -> repetir todo -> repetir una -> sin repetir. */
+    fun cycleRepeatMode() {
+        val c = controller ?: return
+        c.repeatMode = when (c.repeatMode) {
+            Player.REPEAT_MODE_OFF -> Player.REPEAT_MODE_ALL
+            Player.REPEAT_MODE_ALL -> Player.REPEAT_MODE_ONE
+            else -> Player.REPEAT_MODE_OFF
+        }
+    }
+
+    fun moveQueueItem(from: Int, to: Int) {
+        controller?.moveMediaItem(from, to)
+    }
+
+    fun removeQueueItem(index: Int) {
+        controller?.removeMediaItem(index)
+    }
+
+    fun playQueueItem(index: Int) {
+        controller?.seekTo(index, 0L)
+    }
+
     fun release() {
         positionJob?.cancel()
         controller?.removeListener(playerListener)
@@ -124,12 +168,21 @@ class PlaybackConnection(private val context: Context) {
                 positionMs = c.currentPosition.coerceAtLeast(0),
                 durationMs = c.duration.coerceAtLeast(0),
                 playbackState = c.playbackState,
+                shuffleModeEnabled = c.shuffleModeEnabled,
+                repeatMode = c.repeatMode,
             )
         }
+        refreshQueue()
         togglePositionPolling(c.isPlaying)
     }
 
     private fun safeDuration(): Long = controller?.duration?.coerceAtLeast(0) ?: 0L
+
+    private fun refreshQueue() {
+        val c = controller ?: return
+        val ids = (0 until c.mediaItemCount).map { c.getMediaItemAt(it).mediaId }
+        _state.update { it.copy(queueMediaIds = ids, currentIndex = c.currentMediaItemIndex) }
+    }
 
     /** Player no emite la posición de forma continua; se sondea mientras suena. */
     private fun togglePositionPolling(active: Boolean) {

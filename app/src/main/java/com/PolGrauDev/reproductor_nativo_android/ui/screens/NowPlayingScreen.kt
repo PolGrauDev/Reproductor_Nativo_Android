@@ -13,8 +13,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Repeat
+import androidx.compose.material.icons.filled.RepeatOne
+import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -38,13 +42,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.media3.common.Player
 import coil3.compose.AsyncImage
 import com.PolGrauDev.reproductor_nativo_android.data.AlbumArtRequest
 import com.PolGrauDev.reproductor_nativo_android.viewmodel.MusicViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun NowPlayingScreen(viewModel: MusicViewModel, onBack: () -> Unit) {
+fun NowPlayingScreen(viewModel: MusicViewModel, onBack: () -> Unit, onQueueClick: () -> Unit) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val song = uiState.currentSong
 
@@ -58,6 +63,11 @@ fun NowPlayingScreen(viewModel: MusicViewModel, onBack: () -> Unit) {
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = onQueueClick) {
+                        Icon(Icons.AutoMirrored.Filled.QueueMusic, contentDescription = "Ver cola")
                     }
                 },
             )
@@ -132,6 +142,31 @@ fun NowPlayingScreen(viewModel: MusicViewModel, onBack: () -> Unit) {
                 }
                 IconButton(onClick = viewModel::skipNext) {
                     Icon(Icons.Filled.SkipNext, contentDescription = "Siguiente")
+                }
+            }
+
+            Spacer(Modifier.height(8.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                val activeColor = MaterialTheme.colorScheme.primary
+                val inactiveColor = MaterialTheme.colorScheme.onSurfaceVariant
+
+                IconButton(onClick = viewModel::toggleShuffle) {
+                    Icon(
+                        Icons.Filled.Shuffle,
+                        contentDescription = "Aleatorio",
+                        tint = if (uiState.playback.shuffleModeEnabled) activeColor else inactiveColor,
+                    )
+                }
+                IconButton(onClick = viewModel::cycleRepeatMode) {
+                    Icon(
+                        imageVector = if (uiState.playback.repeatMode == Player.REPEAT_MODE_ONE) {
+                            Icons.Filled.RepeatOne
+                        } else {
+                            Icons.Filled.Repeat
+                        },
+                        contentDescription = "Repetir",
+                        tint = if (uiState.playback.repeatMode == Player.REPEAT_MODE_OFF) inactiveColor else activeColor,
+                    )
                 }
             }
         }

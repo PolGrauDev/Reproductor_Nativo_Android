@@ -21,6 +21,12 @@ data class MusicUiState(
 ) {
     val currentSong: Song?
         get() = songs.firstOrNull { it.id.toString() == playback.currentMediaId }
+
+    val queue: List<Song>
+        get() {
+            val byId = songs.associateBy { it.id.toString() }
+            return playback.queueMediaIds.mapNotNull { byId[it] }
+        }
 }
 
 /**
@@ -64,6 +70,16 @@ class MusicViewModel(
     fun skipNext() = playbackConnection.skipNext()
 
     fun skipPrevious() = playbackConnection.skipPrevious()
+
+    fun toggleShuffle() = playbackConnection.toggleShuffle()
+
+    fun cycleRepeatMode() = playbackConnection.cycleRepeatMode()
+
+    fun moveQueueItem(from: Int, to: Int) = playbackConnection.moveQueueItem(from, to)
+
+    fun removeFromQueue(index: Int) = playbackConnection.removeQueueItem(index)
+
+    fun playQueueItem(index: Int) = playbackConnection.playQueueItem(index)
 
     override fun onCleared() {
         playbackConnection.release()
