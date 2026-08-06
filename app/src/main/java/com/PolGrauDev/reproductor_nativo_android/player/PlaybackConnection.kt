@@ -2,6 +2,7 @@ package com.PolGrauDev.reproductor_nativo_android.player
 
 import android.content.ComponentName
 import android.content.Context
+import android.os.SystemClock
 import androidx.core.content.ContextCompat
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
@@ -37,6 +38,8 @@ data class PlaybackUiState(
     val queueMediaIds: List<String> = emptyList(),
     val currentIndex: Int = -1,
     val errorMessage: String? = null,
+    val sleepTimerActive: Boolean = false,
+    val sleepTimerRemainingMs: Long = 0L,
 )
 
 private const val MAX_CONSECUTIVE_ERRORS = 3
@@ -54,6 +57,12 @@ class PlaybackConnection(private val context: Context) {
     private var positionJob: Job? = null
     private var consecutiveErrorCount = 0
 
+    private var sleepTimerJob: Job? = null
+
+    private var fadeDurationMs: Int = 0
+    private var fadeOutJob: Job? = null
+    private var fadeInJob: Job? = null
+
     private val _state = MutableStateFlow(PlaybackUiState())
     val state: StateFlow<PlaybackUiState> = _state.asStateFlow()
 
@@ -70,10 +79,13 @@ class PlaybackConnection(private val context: Context) {
             }
             refreshQueue()
             enrichCurrentItemArtwork()
+            startFadeIn()
+            rescheduleFadeOut()
         }
 
         override fun onPlaybackStateChanged(playbackState: Int) {
             _state.update { it.copy(playbackState = playbackState, durationMs = safeDuration()) }
+            rescheduleFadeOut()
         }
 
         override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) {
@@ -140,6 +152,7 @@ class PlaybackConnection(private val context: Context) {
 
     fun seekTo(positionMs: Long) {
         controller?.seekTo(positionMs)
+        rescheduleFadeOut()
     }
 
     fun skipNext() {
@@ -180,8 +193,49 @@ class PlaybackConnection(private val context: Context) {
         _state.update { it.copy(errorMessage = null) }
     }
 
+    fun startSleepTimer(minutes: Int) {
+        sleepTimerJob?.cancel()
+        val endAt = SystemClock.elapsedRealtime() + minutes * 60_000L
+        sleepTimerJob = scope.launch {
+            while (isActive) {
+                val remaining = sleepTimerRemainingMs(endAt, SystemClock.elapsedRealtime())
+                if (remaining <= 0L) {
+                    controller?.pause()
+                    _state.update { it.copy(sleepTimerActive = false, sleepTimerRemainingMs = 0L) }
+                    break
+                }
+                _state.update { it.copy(sleepTimerActive = true, sleepTimerRemainingMs = remaining) }
+                delay(1_000)
+            }
+        }
+    }
+
+    fun cancelSleepTimer() {
+        sleepTimerJob?.cancel()
+        _state.update { it.copy(sleepTimerActive = false, sleepTimerRemainingMs = 0L) }
+    }
+
+    /**
+     * Fundido secuencial de volumen entre pistas (no crossfade real: ExoPlayer no expone
+     * solapamiento de audio entre dos reproductores sin una arquitectura de doble player).
+     * `ms` = 0 desactiva el fundido.
+     */
+    fun setFadeDurationMs(ms: Int) {
+        fadeDurationMs = ms
+        if (ms <= 0) {
+            fadeOutJob?.cancel()
+            fadeInJob?.cancel()
+            controller?.volume = 1f
+        } else {
+            rescheduleFadeOut()
+        }
+    }
+
     fun release() {
         positionJob?.cancel()
+        sleepTimerJob?.cancel()
+        fadeOutJob?.cancel()
+        fadeInJob?.cancel()
         controller?.removeListener(playerListener)
         controllerFuture?.let { MediaController.releaseFuture(it) }
         controller = null
@@ -224,6 +278,39 @@ class PlaybackConnection(private val context: Context) {
                 }
                 delay(500)
             }
+        }
+    }
+
+    private fun startFadeIn() {
+        fadeInJob?.cancel()
+        if (fadeDurationMs <= 0) return
+        controller?.volume = 0f
+        fadeInJob = scope.launch { rampVolume(to = 1f, durationMs = fadeDurationMs) }
+    }
+
+    /** Reprograma el fundido de salida según la posición/duración actuales de la pista. */
+    private fun rescheduleFadeOut() {
+        fadeOutJob?.cancel()
+        val c = controller ?: return
+        val delayMs = fadeOutDelayMs(
+            durationMs = c.duration.coerceAtLeast(0),
+            positionMs = c.currentPosition.coerceAtLeast(0),
+            fadeDurationMs = fadeDurationMs,
+        ) ?: return
+        fadeOutJob = scope.launch {
+            delay(delayMs)
+            rampVolume(to = 0f, durationMs = fadeDurationMs)
+        }
+    }
+
+    private suspend fun rampVolume(to: Float, durationMs: Int) {
+        val steps = 20
+        val stepDelayMs = (durationMs / steps).toLong().coerceAtLeast(1L)
+        val from = controller?.volume ?: return
+        repeat(steps) { step ->
+            val fraction = (step + 1).toFloat() / steps
+            controller?.volume = from + (to - from) * fraction
+            delay(stepDelayMs)
         }
     }
 

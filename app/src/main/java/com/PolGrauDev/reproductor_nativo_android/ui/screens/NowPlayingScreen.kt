@@ -47,6 +47,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.Player
 import coil3.compose.AsyncImage
 import com.PolGrauDev.reproductor_nativo_android.data.AlbumArtRequest
+import com.PolGrauDev.reproductor_nativo_android.ui.util.formatMillis
 import com.PolGrauDev.reproductor_nativo_android.viewmodel.MusicViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -183,11 +184,4 @@ fun NowPlayingScreen(viewModel: MusicViewModel, onBack: () -> Unit, onQueueClick
             }
         }
     }
-}
-
-private fun formatMillis(ms: Long): String {
-    val totalSeconds = (ms / 1000).coerceAtLeast(0)
-    val minutes = totalSeconds / 60
-    val seconds = totalSeconds % 60
-    return "%d:%02d".format(minutes, seconds)
 }

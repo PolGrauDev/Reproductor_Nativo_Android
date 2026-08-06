@@ -16,6 +16,7 @@ import com.PolGrauDev.reproductor_nativo_android.ui.screens.LibraryScreen
 import com.PolGrauDev.reproductor_nativo_android.ui.screens.NowPlayingScreen
 import com.PolGrauDev.reproductor_nativo_android.ui.screens.PlaylistDetailScreen
 import com.PolGrauDev.reproductor_nativo_android.ui.screens.QueueScreen
+import com.PolGrauDev.reproductor_nativo_android.ui.screens.SettingsScreen
 import com.PolGrauDev.reproductor_nativo_android.viewmodel.MusicViewModel
 
 private const val NO_ID = -1L
@@ -29,6 +30,7 @@ object Routes {
     const val FOLDER_DETAIL = "folderDetail/{folderPath}"
     const val FAVORITES = "favorites"
     const val PLAYLIST_DETAIL = "playlistDetail/{playlistId}"
+    const val SETTINGS = "settings"
 
     fun albumDetail(albumId: Long?) = "albumDetail/${albumId ?: NO_ID}"
     fun artistDetail(artistId: Long?) = "artistDetail/${artistId ?: NO_ID}"
@@ -51,6 +53,13 @@ fun NavGraph(
                 onFolderClick = { folder -> navController.navigate(Routes.folderDetail(folder.path)) },
                 onFavoritesClick = { navController.navigate(Routes.FAVORITES) },
                 onPlaylistClick = { playlistId -> navController.navigate(Routes.playlistDetail(playlistId)) },
+                onSettingsClick = { navController.navigate(Routes.SETTINGS) },
+            )
+        }
+        composable(Routes.SETTINGS) {
+            SettingsScreen(
+                viewModel = viewModel,
+                onBack = { navController.popBackStack() },
             )
         }
         composable(Routes.NOW_PLAYING) {

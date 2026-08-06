@@ -64,9 +64,11 @@ PlaybackConnection (MediaController)┘        │
         ▼                                    ▼
 PlaybackService (MediaSessionService +  LibraryScreen / AlbumDetailScreen / ArtistDetailScreen /
    ExoPlayer + MediaSession)              NowPlayingScreen / QueueScreen / FavoritesScreen /
-                                           PlaylistDetailScreen
+                                           PlaylistDetailScreen / SettingsScreen
 PlaylistRepository (Room: favorites +     (ui/screens, via ui/navigation/NavGraph)
    playlists) ─────────────────────────────────┘
+SettingsRepository (DataStore: fade
+   duration + sleep timer default) ────────────┘
 ```
 
 - **`data/MediaRepository`** — queries `MediaStore.Audio.Media` once (`IS_MUSIC != 0`) via
@@ -141,7 +143,17 @@ PlaylistRepository (Room: favorites +     (ui/screens, via ui/navigation/NavGrap
   implements queue manipulation natively, this layer only exposes it as `StateFlow` state.
   Known v1 simplification: the queue list (`queueMediaIds`) reflects playlist/index order, not
   the shuffled play order — Media3 applies shuffle to next/previous navigation, not to what
-  `getMediaItemAt(index)` returns.
+  `getMediaItemAt(index)` returns. The sleep timer (`startSleepTimer`/`cancelSleepTimer`) follows
+  the same job/`delay`/cancel idiom as the position-polling loop, using
+  `SystemClock.elapsedRealtime()` (monotonic) rather than wall-clock time, and calls
+  `controller.pause()` when it reaches zero. **"Fundido entre canciones" is deliberately not
+  crossfade**: Media3 1.10.0 has no public API for overlapping audio between two tracks (that
+  would need a dual-`ExoPlayer` mixing architecture); `setFadeDurationMs` instead ramps the
+  single `MediaController`'s `volume` down near the end of a track and back up on
+  `onMediaItemTransition` (see `rampVolume`/`rescheduleFadeOut`/`startFadeIn`), which removes the
+  abrupt volume cut without any real overlap — hence the UI/code wording says "fundido", not
+  "crossfade". Gapless playback itself needs no configuration: Media3 already handles it
+  automatically at the decoder level.
 - **`player/PlaybackConnection` error handling** — `Player.Listener.onPlayerError` translates
   `PlaybackException.errorCode` into a short Spanish message (`toUserMessage`) and publishes it as
   `PlaybackUiState.errorMessage`. Recovery is automatic, not just a notice: if there's a next item
@@ -159,13 +171,23 @@ PlaylistRepository (Room: favorites +     (ui/screens, via ui/navigation/NavGrap
   takes an optional queue scope — `AlbumDetailScreen`/`ArtistDetailScreen` pass the group's own
   song list so playing from a group's detail screen queues just that group, not the whole
   library.
-- **`data/db/` (Room) + `data/PlaylistRepository`** — the only persistence layer in the app;
+- **`data/db/` (Room) + `data/PlaylistRepository`** — the persistence layer for relational data
+  (favorites/playlists). `data/SettingsRepository` (DataStore Preferences, see below) persists
+  simple scalar app settings. Together these are the only persistence layers in the app;
   everything else is either derived from `MediaStore` or lives only in the `Player`/in-memory.
   Two tables: `favorites` (just `songId` + timestamp) and `playlists` +
   `playlist_song_cross_ref` (has a `position` column for manual ordering, reassigned in full on
   every move rather than swapped — see `PlaylistRepository.moveSong`). Both tables store only
   `Song.id`; metadata is resolved against `MediaRepository.songs` in memory, same pattern as the
   playback queue. Uses KSP (not kapt) for the Room annotation processor.
+- **`data/SettingsRepository`** — wraps DataStore Preferences (not Room: these are simple
+  scalar values, not relational data) the same way `PlaylistRepository` wraps Room. Exposes
+  `fadeDurationMs` (0 = disabled) and `sleepTimerDefaultMinutes` as `Flow`s + suspend setters.
+  `MusicViewModel` pre-combines these into a `SettingsExtras` bucket alongside the existing
+  `LibraryExtras` bucket (`combine()`'s built-in overload tops out at 5 flows, which is already
+  spent by `songs`/`playback`/`isLoadingLibrary`/`searchQuery`/one extras bucket — a second
+  settings-only flow has to be pre-merged the same way `libraryExtras` already is, not added as
+  a 6th argument).
 - **`viewmodel/MusicViewModel.playlistSongsFlow(playlistId)`** — the one piece of UI state that
   is *not* folded into `MusicUiState`, because it's parameterized per-playlist.
   `PlaylistDetailScreen` collects it directly via
@@ -175,6 +197,10 @@ PlaylistRepository (Room: favorites +     (ui/screens, via ui/navigation/NavGrap
   `READ_MEDIA_AUDIO` on API 33+, `READ_EXTERNAL_STORAGE` below that (declared in the manifest
   with `android:maxSdkVersion="32"`). `MainActivity` gates the whole `NavGraph` behind this
   permission state.
+- **`ui/screens/SettingsScreen` (`Routes.SETTINGS`)** — reached from an `IconButton` in
+  `LibraryScreen`'s `TopAppBar`, next to the existing `SortMenu`. Hosts the sleep timer picker
+  (reuses the `Box`/`IconButton`/`DropdownMenu` pattern from `LibraryScreen`'s `SortMenu`) and the
+  fade-duration `Slider` described under `player/PlaybackConnection` above.
 - **`MainActivity` global `SnackbarHost`** — a single `SnackbarHostState` lives in the `Scaffold`
   wrapping `NavGraph`, not per-screen: playback errors are Service-level events that can happen on
   any screen (e.g. an auto-skip while browsing the library), so there's one `LaunchedEffect`

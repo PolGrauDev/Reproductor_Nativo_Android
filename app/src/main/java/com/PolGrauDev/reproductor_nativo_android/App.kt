@@ -9,6 +9,7 @@ import com.PolGrauDev.reproductor_nativo_android.data.AlbumArtFetcher
 import com.PolGrauDev.reproductor_nativo_android.data.AlbumArtKeyer
 import com.PolGrauDev.reproductor_nativo_android.data.MediaRepository
 import com.PolGrauDev.reproductor_nativo_android.data.PlaylistRepository
+import com.PolGrauDev.reproductor_nativo_android.data.SettingsRepository
 import com.PolGrauDev.reproductor_nativo_android.data.db.AppDatabase
 
 class App : Application(), SingletonImageLoader.Factory {
@@ -22,6 +23,8 @@ class App : Application(), SingletonImageLoader.Factory {
     val playlistRepository: PlaylistRepository by lazy {
         PlaylistRepository(database.favoriteDao(), database.playlistDao())
     }
+
+    val settingsRepository: SettingsRepository by lazy { SettingsRepository(applicationContext) }
 
     override fun onCreate() {
         super.onCreate()

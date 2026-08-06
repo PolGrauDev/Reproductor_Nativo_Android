@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
@@ -80,6 +81,7 @@ fun LibraryScreen(
     onFolderClick: (FolderGroup) -> Unit,
     onFavoritesClick: () -> Unit,
     onPlaylistClick: (Long) -> Unit,
+    onSettingsClick: () -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
@@ -89,7 +91,12 @@ fun LibraryScreen(
         topBar = {
             TopAppBar(
                 title = { Text("Biblioteca") },
-                actions = { SortMenu(current = uiState.sortOrder, onSelect = viewModel::setSortOrder) },
+                actions = {
+                    SortMenu(current = uiState.sortOrder, onSelect = viewModel::setSortOrder)
+                    IconButton(onClick = onSettingsClick) {
+                        Icon(Icons.Filled.Settings, contentDescription = "Ajustes")
+                    }
+                },
             )
         },
     ) { padding ->

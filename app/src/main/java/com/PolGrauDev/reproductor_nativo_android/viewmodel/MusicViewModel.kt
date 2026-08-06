@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.PolGrauDev.reproductor_nativo_android.data.MediaRepository
 import com.PolGrauDev.reproductor_nativo_android.data.PlaylistRepository
+import com.PolGrauDev.reproductor_nativo_android.data.SettingsRepository
 import com.PolGrauDev.reproductor_nativo_android.data.model.AlbumGroup
 import com.PolGrauDev.reproductor_nativo_android.data.model.ArtistGroup
 import com.PolGrauDev.reproductor_nativo_android.data.model.FolderGroup
@@ -32,6 +33,8 @@ data class MusicUiState(
     val favoriteSongIds: Set<Long> = emptySet(),
     val playlists: List<PlaylistSummary> = emptyList(),
     val sortOrder: SortOrder = SortOrder.TITLE,
+    val fadeDurationMs: Int = 0,
+    val sleepTimerDefaultMinutes: Int = 30,
 ) {
     val currentSong: Song?
         get() = songs.firstOrNull { it.id.toString() == playback.currentMediaId }
@@ -79,6 +82,16 @@ private data class LibraryExtras(
     val sortOrder: SortOrder,
 )
 
+private data class SettingsExtras(
+    val fadeDurationMs: Int,
+    val sleepTimerDefaultMinutes: Int,
+)
+
+private data class CombinedExtras(
+    val library: LibraryExtras,
+    val settings: SettingsExtras,
+)
+
 /**
  * Conecta [MediaRepository] (biblioteca) y [PlaybackConnection] (estado de reproducción,
  * gobernado por el Service, no por esta ViewModel) en un único StateFlow para la UI.
@@ -86,6 +99,7 @@ private data class LibraryExtras(
 class MusicViewModel(
     private val repository: MediaRepository,
     private val playlistRepository: PlaylistRepository,
+    private val settingsRepository: SettingsRepository,
     applicationContext: Context,
 ) : ViewModel() {
 
@@ -100,21 +114,33 @@ class MusicViewModel(
         sortOrder,
     ) { favoriteIds, playlists, order -> LibraryExtras(favoriteIds.toSet(), playlists, order) }
 
+    private val settingsExtras = combine(
+        settingsRepository.fadeDurationMs,
+        settingsRepository.sleepTimerDefaultMinutes,
+    ) { fadeDurationMs, sleepTimerDefaultMinutes -> SettingsExtras(fadeDurationMs, sleepTimerDefaultMinutes) }
+
+    private val combinedExtras = combine(
+        libraryExtras,
+        settingsExtras,
+    ) { library, settings -> CombinedExtras(library, settings) }
+
     val uiState: StateFlow<MusicUiState> = combine(
         repository.songs,
         playbackConnection.state,
         isLoadingLibrary,
         searchQuery,
-        libraryExtras,
+        combinedExtras,
     ) { songs, playback, loading, query, extras ->
         MusicUiState(
             songs = songs,
             isLoadingLibrary = loading,
             playback = playback,
             searchQuery = query,
-            favoriteSongIds = extras.favoriteSongIds,
-            playlists = extras.playlists,
-            sortOrder = extras.sortOrder,
+            favoriteSongIds = extras.library.favoriteSongIds,
+            playlists = extras.library.playlists,
+            sortOrder = extras.library.sortOrder,
+            fadeDurationMs = extras.settings.fadeDurationMs,
+            sleepTimerDefaultMinutes = extras.settings.sleepTimerDefaultMinutes,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), MusicUiState())
 
@@ -123,6 +149,9 @@ class MusicViewModel(
         viewModelScope.launch {
             repository.scanLibrary()
             isLoadingLibrary.value = false
+        }
+        viewModelScope.launch {
+            settingsRepository.fadeDurationMs.collect { playbackConnection.setFadeDurationMs(it) }
         }
     }
 
@@ -158,6 +187,17 @@ class MusicViewModel(
     fun playQueueItem(index: Int) = playbackConnection.playQueueItem(index)
 
     fun clearPlaybackError() = playbackConnection.clearError()
+
+    fun startSleepTimer(minutes: Int) {
+        playbackConnection.startSleepTimer(minutes)
+        viewModelScope.launch { settingsRepository.setSleepTimerDefaultMinutes(minutes) }
+    }
+
+    fun cancelSleepTimer() = playbackConnection.cancelSleepTimer()
+
+    fun setFadeDurationMs(ms: Int) {
+        viewModelScope.launch { settingsRepository.setFadeDurationMs(ms) }
+    }
 
     fun refreshLibrary() {
         viewModelScope.launch { repository.scanLibrary() }
