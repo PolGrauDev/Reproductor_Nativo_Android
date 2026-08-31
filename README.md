@@ -131,7 +131,10 @@ automático) y ejecutar desde ahí.
 ## 🗺️ Roadmap / Pendiente
 
 - [ ] Firma de build de release (`signingConfigs`)
-- [ ] Tests unitarios e instrumentados más allá de las plantillas por defecto
+- [ ] Tests unitarios e instrumentados más allá de las plantillas por defecto — ya cubiertos:
+  lógica pura de reproducción (`PlaybackScheduling`) y los repositorios de datos
+  (`PlaylistRepository`, `SettingsRepository`); pendientes: `MusicViewModel`, `MediaRepository`,
+  `PlaybackConnection`/`PlaybackService` y las pantallas Compose
 - [ ] Capturas de pantalla y material gráfico para este README
 - [ ] Pulido general de UI/UX y posibles nuevas funcionalidades
 

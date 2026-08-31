@@ -126,7 +126,10 @@ it from there.
 ## 🗺️ Roadmap / TODO
 
 - [ ] Release build signing (`signingConfigs`)
-- [ ] Unit and instrumented tests beyond the default templates
+- [ ] Unit and instrumented tests beyond the default templates — already covered: pure
+  playback logic (`PlaybackScheduling`) and the data repositories (`PlaylistRepository`,
+  `SettingsRepository`); still pending: `MusicViewModel`, `MediaRepository`,
+  `PlaybackConnection`/`PlaybackService`, and the Compose screens
 - [ ] Screenshots and visual material for this README
 - [ ] General UI/UX polish and possible new features
 
