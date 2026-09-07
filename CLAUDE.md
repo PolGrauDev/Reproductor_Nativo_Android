@@ -29,8 +29,12 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 adb shell am start -n com.PolGrauDev.reproductor_nativo_android/.MainActivity
 ```
 
-Unit tests (single module, only the stock JUnit template test exists today —
-`app/src/test/.../ExampleUnitTest.kt`):
+Unit tests (single module; the stock JUnit template test (`ExampleUnitTest.kt`) is still there
+alongside real coverage of the repositories/pure-logic layers — `data/MediaRepositoryTest.kt`,
+`data/PlaylistRepositoryTest.kt`, `data/SettingsRepositoryTest.kt`,
+`data/model/SongConstructionSanityTest.kt` (+ `SongTestFixtures.kt`),
+`player/PlaybackConnectionLogicTest.kt`, `player/PlaybackSchedulingTest.kt`,
+`player/PlaybackServiceLogicTest.kt`, `viewmodel/MusicUiStateTest.kt`):
 ```
 ./gradlew :app:testDebugUnitTest
 ./gradlew :app:testDebugUnitTest --tests "com.PolGrauDev.reproductor_nativo_android.ExampleUnitTest"
@@ -71,6 +75,26 @@ SettingsRepository (DataStore: fade
    duration + sleep timer default) ────────────┘
 ```
 
+- **App-style system (Papel / Stickers / Fanzine)** — predates this plan's Task 1-6 work, but is
+  documented here for the first time. `ui/theme/style/AppStyle.kt` is a 3-value enum
+  (`PAPEL`/`STICKERS`/`FANZINE`); the user's choice is persisted via `data/SettingsRepository`
+  (same DataStore Preferences mechanism as `fadeDurationMs`/`sleepTimerDefaultMinutes`, stored
+  under the `app_style` string key, falling back to `AppStyle.PAPEL` if the stored value is
+  missing or fails `AppStyle.valueOf(...)`) and folded into `MusicUiState.appStyle` via the same
+  `SettingsExtras` combine bucket described under `data/SettingsRepository` below. It's selected
+  from `ui/screens/SettingsScreen` (`onSetAppStyle` wired to `MusicViewModel.setAppStyle`).
+  Every screen file under `ui/screens/*.kt` and `ui/components/AddToPlaylistDialog.kt` is a thin
+  dispatcher: it reads `uiState.appStyle` and `when`-branches to a per-style implementation
+  (`LibraryScreen` → `LibraryScreenPapel`/`LibraryScreenSticker`/`LibraryScreenFanzine` in
+  `ui/screens/style/{papel,sticker,fanzine}/`; likewise `AddToPlaylistDialog` →
+  `AddToPlaylistDialogPapel`/`...Sticker`/`...Fanzine` in
+  `ui/components/style/{papel,sticker,fanzine}/`) — the dispatcher file itself has no styling
+  logic, just prop forwarding. Each style's design tokens (colors, type scale, custom
+  `FontFamily`s, shapes) live in their own `ui/theme/style/<style>/*Tokens.kt` (e.g.
+  `PapelTokens.kt` defines `PapelColors`/`PapelFonts`/`PapelType`). Custom fonts are loaded via
+  `FontFamily(Font(R.font....))` from `.ttf` files in `res/font/` (Anton, Fredoka, Gaegu,
+  Instrument Serif, Karla, Quicksand, Special Elite), with their licenses (mostly OFL) bundled as
+  plain-text files under `assets/font_licenses/` rather than only referenced externally.
 - **`data/MediaRepository`** — queries `MediaStore.Audio.Media` once (`IS_MUSIC != 0`) via
   `scanLibrary()`, caching the result in a `StateFlow<List<Song>>`. `Song` carries both `albumId`
   and `artistId` (not just the display strings) so grouping is done by stable MediaStore ID, not
@@ -88,7 +112,11 @@ SettingsRepository (DataStore: fade
   the ViewModel's own initial `scanLibrary()` call in `init` runs as soon as the Activity composes,
   which can race ahead of the user actually granting the permission on first install or after a
   revoke — without the extra rescan-on-grant, the library would stay empty until some unrelated
-  MediaStore change happened to fire the observer.
+  MediaStore change happened to fire the observer. The `Cursor` → `Song` row mapping is its own
+  `internal fun songFromCursor(...)` rather than inline logic inside `scanLibrary()`'s query loop,
+  so `data/MediaRepositoryTest.kt` can build a `MatrixCursor` by hand (via Robolectric) and assert
+  on the mapping directly — e.g. that a `0` `ALBUM_ID`/`ARTIST_ID` (MediaStore's "no value" sentinel
+  for those columns) maps to `null`, not `0L`, without needing a real device/emulator.
 - **`data/model/AlbumGroup` / `ArtistGroup` / `FolderGroup`** (`toAlbumGroups()` /
   `toArtistGroups()` / `toFolderGroups()` extensions on `List<Song>`) — pure in-memory `groupBy`
   derivations, no separate data source. Computed as part of `MusicUiState` (`albums`, `artists`,
@@ -127,7 +155,10 @@ SettingsRepository (DataStore: fade
   doesn't auto-cycle, the repeat button's `parameter` is always precomputed as "the next mode in the
   cycle" (`nextRepeatMode()`, same OFF→ALL→ONE order as `PlaybackConnection.cycleRepeatMode()` but
   duplicated here since this runs directly against the service's `Player`, not through
-  `PlaybackConnection`). A `Player.Listener` added directly to the service's `ExoPlayer` (separate
+  `PlaybackConnection`). `nextRepeatMode()` is `internal` (not `private`) purely so
+  `player/PlaybackServiceLogicTest.kt` can call it directly against a bare
+  `PlaybackService()` instance under Robolectric — no logic difference from a private function. A
+  `Player.Listener` added directly to the service's `ExoPlayer` (separate
   from `PlaybackConnection`'s own client-side listener) rebuilds and republishes both buttons via
   `mediaSession.setMediaButtonPreferences(...)` on every shuffle/repeat change, whether it
   originated from the notification or from `NowPlayingScreen` in-app.
@@ -153,9 +184,18 @@ SettingsRepository (DataStore: fade
   `onMediaItemTransition` (see `rampVolume`/`rescheduleFadeOut`/`startFadeIn`), which removes the
   abrupt volume cut without any real overlap — hence the UI/code wording says "fundido", not
   "crossfade". Gapless playback itself needs no configuration: Media3 already handles it
-  automatically at the decoder level.
+  automatically at the decoder level. The pure arithmetic behind the sleep timer and the fade
+  schedule — "how many ms remain" and "how many ms until the fade-out should start" — is pulled
+  out into standalone top-level functions in `player/PlaybackScheduling.kt`
+  (`sleepTimerRemainingMs`, `fadeOutDelayMs`), so `player/PlaybackSchedulingTest.kt` can test the
+  math without a live `Player`/`MediaController`. `rampVolume` itself stays `private` and
+  untested directly — unlike those two, it isn't pure arithmetic, it drives the live
+  `MediaController`'s volume over time.
 - **`player/PlaybackConnection` error handling** — `Player.Listener.onPlayerError` translates
-  `PlaybackException.errorCode` into a short Spanish message (`toUserMessage`) and publishes it as
+  `PlaybackException.errorCode` into a short Spanish message (`toUserMessage`, an `internal`
+  extension function on `PlaybackException` rather than `private` so
+  `player/PlaybackConnectionLogicTest.kt` can call `exception.toUserMessage(...)` directly per
+  error code — no logic change from being private) and publishes it as
   `PlaybackUiState.errorMessage`. Recovery is automatic, not just a notice: if there's a next item
   (`hasNextMediaItem()`), it auto-skips (`seekToNextMediaItem` + `prepare` + `play`) so one corrupt
   file doesn't kill the whole session. A private `consecutiveErrorCount` (reset on
@@ -170,7 +210,17 @@ SettingsRepository (DataStore: fade
   instance; `MusicViewModelFactory` wires it up. `playSong(song, fromList = uiState.value.songs)`
   takes an optional queue scope — `AlbumDetailScreen`/`ArtistDetailScreen` pass the group's own
   song list so playing from a group's detail screen queues just that group, not the whole
-  library.
+  library. A second, separate search field — `queueSearchQuery` (own `MutableStateFlow<String>`,
+  folded into the existing `libraryExtras` combine bucket alongside `searchQuery`) and the derived
+  `MusicUiState.filteredQueue` (filters `queue` by title/artist, case-insensitive; returns `queue`
+  unfiltered when blank) — is scoped to *only* the current playback queue, independent of the
+  library-wide `searchQuery`/`filteredSongs`. `QueueScreen*`'s search field writes to it via
+  `viewModel::setQueueSearchQuery`. Because `filteredQueue` is a different list (and order) than
+  `queue`, each `QueueScreen*` style implementation maps a filtered-list row back to its real
+  queue index via `queue.indexOf(song)` before calling `playQueueItem`/`moveQueueItem` — see
+  `QueueScreenPapel`'s `realIndex` — and hides the reorder up/down affordances entirely while a
+  search is active (`isSearching`), since reordering a filtered subview against the real queue's
+  indices would be confusing and isn't needed for a search-to-play use case.
 - **`data/db/` (Room) + `data/PlaylistRepository`** — the persistence layer for relational data
   (favorites/playlists). `data/SettingsRepository` (DataStore Preferences, see below) persists
   simple scalar app settings. Together these are the only persistence layers in the app;
@@ -201,6 +251,12 @@ SettingsRepository (DataStore: fade
   `LibraryScreen`'s `TopAppBar`, next to the existing `SortMenu`. Hosts the sleep timer picker
   (reuses the `Box`/`IconButton`/`DropdownMenu` pattern from `LibraryScreen`'s `SortMenu`) and the
   fade-duration `Slider` described under `player/PlaybackConnection` above.
+- **`NowPlayingScreen`'s search icon → Library** — all three style variants' top bar take an
+  `onSearchClick` param; `ui/navigation/NavGraph.kt` wires it to
+  `navController.navigate(Routes.SONG_LIST) { popUpTo(Routes.SONG_LIST) { inclusive = true } }`
+  rather than a plain `navigate(Routes.SONG_LIST)` — collapsing the back stack down to (and
+  including) the existing `SONG_LIST` entry instead of pushing a duplicate one, so pressing back
+  from the Library after using this shortcut doesn't walk back through Now Playing again.
 - **`MainActivity` global `SnackbarHost`** — a single `SnackbarHostState` lives in the `Scaffold`
   wrapping `NavGraph`, not per-screen: playback errors are Service-level events that can happen on
   any screen (e.g. an auto-skip while browsing the library), so there's one `LaunchedEffect`
