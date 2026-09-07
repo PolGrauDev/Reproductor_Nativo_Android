@@ -87,7 +87,7 @@ fun NowPlayingScreenFanzine(viewModel: MusicViewModel, uiState: MusicUiState, on
                 Icons.Filled.Search,
                 contentDescription = "Buscar",
                 tint = FanzineColors.Ink,
-                modifier = Modifier.size(36.dp).rotate(-2f).background(FanzineColors.Paper).clickable(onClick = onSearchClick).padding(7.dp),
+                modifier = Modifier.size(36.dp).rotate(2f).background(FanzineColors.Paper).clickable(onClick = onSearchClick).padding(7.dp),
             )
             Spacer(Modifier.width(10.dp))
             Icon(
