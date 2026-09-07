@@ -19,3 +19,6 @@ google-services.json
 # Build outputs
 *.apk
 *.aab
+
+# Isolated worktrees for agent-driven development
+.worktrees/
