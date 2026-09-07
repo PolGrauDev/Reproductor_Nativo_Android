@@ -2,6 +2,7 @@ package com.PolGrauDev.reproductor_nativo_android.ui.screens.style.papel
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -13,11 +14,13 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
@@ -27,6 +30,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -42,6 +46,8 @@ import com.PolGrauDev.reproductor_nativo_android.viewmodel.MusicViewModel
 fun QueueScreenPapel(viewModel: MusicViewModel, onBack: () -> Unit) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val queue = uiState.queue
+    val isSearching = uiState.queueSearchQuery.isNotBlank()
+    val displayQueue = if (isSearching) uiState.filteredQueue else queue
     val currentIndex = uiState.playback.currentIndex
 
     Scaffold(containerColor = PapelColors.Background) { padding ->
@@ -60,17 +66,20 @@ fun QueueScreenPapel(viewModel: MusicViewModel, onBack: () -> Unit) {
                     modifier = Modifier.padding(top = 6.dp),
                 )
             }
+            PapelQueueSearchField(query = uiState.queueSearchQuery, onQueryChange = viewModel::setQueueSearchQuery)
             LazyColumn(Modifier.fillMaxSize()) {
-                itemsIndexed(queue, key = { index, song -> "$index-${song.id}" }) { index, song ->
+                itemsIndexed(displayQueue, key = { index, song -> "$index-${song.id}" }) { index, song ->
+                    val realIndex = if (isSearching) queue.indexOf(song).coerceAtLeast(0) else index
                     PapelQueueRow(
                         song = song,
-                        isCurrent = index == currentIndex,
+                        isCurrent = realIndex == currentIndex,
+                        isSearching = isSearching,
                         canMoveUp = index > 0,
-                        canMoveDown = index < queue.lastIndex,
-                        onClick = { viewModel.playQueueItem(index) },
-                        onMoveUp = { viewModel.moveQueueItem(index, index - 1) },
-                        onMoveDown = { viewModel.moveQueueItem(index, index + 1) },
-                        onRemove = { viewModel.removeFromQueue(index) },
+                        canMoveDown = index < displayQueue.lastIndex,
+                        onClick = { viewModel.playQueueItem(realIndex) },
+                        onMoveUp = { viewModel.moveQueueItem(realIndex, realIndex - 1) },
+                        onMoveDown = { viewModel.moveQueueItem(realIndex, realIndex + 1) },
+                        onRemove = { viewModel.removeFromQueue(realIndex) },
                     )
                 }
             }
@@ -79,9 +88,45 @@ fun QueueScreenPapel(viewModel: MusicViewModel, onBack: () -> Unit) {
 }
 
 @Composable
+private fun PapelQueueSearchField(query: String, onQueryChange: (String) -> Unit) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 0.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(Icons.Filled.Search, contentDescription = null, tint = PapelColors.OnSurfaceVariant, modifier = Modifier.size(20.dp))
+            Spacer(Modifier.width(10.dp))
+            Box(Modifier.weight(1f)) {
+                if (query.isEmpty()) {
+                    Text("Buscar en la cola", style = PapelType.BodyMedium, color = PapelColors.OnSurfaceVariant)
+                }
+                BasicTextField(
+                    value = query,
+                    onValueChange = onQueryChange,
+                    singleLine = true,
+                    textStyle = PapelType.BodyMedium.copy(color = PapelColors.OnSurface),
+                    cursorBrush = SolidColor(PapelColors.Primary),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            if (query.isNotEmpty()) {
+                Icon(
+                    Icons.Filled.Close,
+                    contentDescription = "Limpiar búsqueda",
+                    tint = PapelColors.OnSurfaceVariant,
+                    modifier = Modifier.size(18.dp).clickable { onQueryChange("") },
+                )
+            }
+        }
+        PapelRowDivider()
+    }
+}
+
+@Composable
 private fun PapelQueueRow(
     song: Song,
     isCurrent: Boolean,
+    isSearching: Boolean,
     canMoveUp: Boolean,
     canMoveDown: Boolean,
     onClick: () -> Unit,
@@ -113,24 +158,26 @@ private fun PapelQueueRow(
                     Text(song.artist, style = PapelType.BodySmall, color = PapelColors.OnSurfaceVariant, maxLines = 1)
                 }
             }
-            Icon(
-                Icons.Filled.KeyboardArrowUp,
-                contentDescription = "Subir",
-                tint = if (canMoveUp) PapelColors.OnSurface else PapelColors.Faint,
-                modifier = Modifier.clickable(enabled = canMoveUp, onClick = onMoveUp).padding(6.dp),
-            )
-            Icon(
-                Icons.Filled.KeyboardArrowDown,
-                contentDescription = "Bajar",
-                tint = if (canMoveDown) PapelColors.OnSurface else PapelColors.Faint,
-                modifier = Modifier.clickable(enabled = canMoveDown, onClick = onMoveDown).padding(6.dp),
-            )
-            Icon(
-                Icons.Filled.Close,
-                contentDescription = "Quitar de la cola",
-                tint = PapelColors.OnSurfaceVariant,
-                modifier = Modifier.clickable(onClick = onRemove).padding(6.dp),
-            )
+            if (!isSearching) {
+                Icon(
+                    Icons.Filled.KeyboardArrowUp,
+                    contentDescription = "Subir",
+                    tint = if (canMoveUp) PapelColors.OnSurface else PapelColors.Faint,
+                    modifier = Modifier.clickable(enabled = canMoveUp, onClick = onMoveUp).padding(6.dp),
+                )
+                Icon(
+                    Icons.Filled.KeyboardArrowDown,
+                    contentDescription = "Bajar",
+                    tint = if (canMoveDown) PapelColors.OnSurface else PapelColors.Faint,
+                    modifier = Modifier.clickable(enabled = canMoveDown, onClick = onMoveDown).padding(6.dp),
+                )
+                Icon(
+                    Icons.Filled.Close,
+                    contentDescription = "Quitar de la cola",
+                    tint = PapelColors.OnSurfaceVariant,
+                    modifier = Modifier.clickable(onClick = onRemove).padding(6.dp),
+                )
+            }
         }
         PapelRowDivider()
     }

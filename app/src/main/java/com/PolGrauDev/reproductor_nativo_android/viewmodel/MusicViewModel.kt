@@ -37,6 +37,7 @@ data class MusicUiState(
     val fadeDurationMs: Int = 0,
     val sleepTimerDefaultMinutes: Int = 30,
     val appStyle: AppStyle = AppStyle.PAPEL,
+    val queueSearchQuery: String = "",
 ) {
     val currentSong: Song?
         get() = songs.firstOrNull { it.id.toString() == playback.currentMediaId }
@@ -45,6 +46,15 @@ data class MusicUiState(
         get() {
             val byId = songs.associateBy { it.id.toString() }
             return playback.queueMediaIds.mapNotNull { byId[it] }
+        }
+
+    val filteredQueue: List<Song>
+        get() {
+            if (queueSearchQuery.isBlank()) return queue
+            return queue.filter {
+                it.title.contains(queueSearchQuery, ignoreCase = true) ||
+                    it.artist.contains(queueSearchQuery, ignoreCase = true)
+            }
         }
 
     val filteredSongs: List<Song>
@@ -82,6 +92,7 @@ private data class LibraryExtras(
     val favoriteSongIds: Set<Long>,
     val playlists: List<PlaylistSummary>,
     val sortOrder: SortOrder,
+    val queueSearchQuery: String,
 )
 
 private data class SettingsExtras(
@@ -110,12 +121,16 @@ class MusicViewModel(
     private val isLoadingLibrary = MutableStateFlow(true)
     private val searchQuery = MutableStateFlow("")
     private val sortOrder = MutableStateFlow(SortOrder.TITLE)
+    private val queueSearchQuery = MutableStateFlow("")
 
     private val libraryExtras = combine(
         playlistRepository.favoriteSongIds,
         playlistRepository.playlists,
         sortOrder,
-    ) { favoriteIds, playlists, order -> LibraryExtras(favoriteIds.toSet(), playlists, order) }
+        queueSearchQuery,
+    ) { favoriteIds, playlists, order, queueQuery ->
+        LibraryExtras(favoriteIds.toSet(), playlists, order, queueQuery)
+    }
 
     private val settingsExtras = combine(
         settingsRepository.fadeDurationMs,
@@ -148,6 +163,7 @@ class MusicViewModel(
             fadeDurationMs = extras.settings.fadeDurationMs,
             sleepTimerDefaultMinutes = extras.settings.sleepTimerDefaultMinutes,
             appStyle = extras.settings.appStyle,
+            queueSearchQuery = extras.library.queueSearchQuery,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), MusicUiState())
 
@@ -169,6 +185,10 @@ class MusicViewModel(
 
     fun setSearchQuery(query: String) {
         searchQuery.value = query
+    }
+
+    fun setQueueSearchQuery(query: String) {
+        queueSearchQuery.value = query
     }
 
     fun setSortOrder(order: SortOrder) {

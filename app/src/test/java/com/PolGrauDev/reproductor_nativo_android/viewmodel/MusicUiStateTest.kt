@@ -237,6 +237,116 @@ class MusicUiStateTest {
         assertEquals(emptyList<Song>(), state.queue)
     }
 
+    // ==================== filteredQueue tests ====================
+
+    @Test
+    fun `filteredQueue returns full queue when queueSearchQuery is blank`() {
+        val song1 = testSong(id = 1L, title = "Song One")
+        val song2 = testSong(id = 2L, title = "Song Two")
+        val state = MusicUiState(
+            songs = listOf(song1, song2),
+            playback = PlaybackUiState(queueMediaIds = listOf("1", "2")),
+            queueSearchQuery = "",
+        )
+
+        assertEquals(listOf(song1, song2), state.filteredQueue)
+    }
+
+    @Test
+    fun `filteredQueue filters by title case-insensitive`() {
+        val song1 = testSong(id = 1L, title = "Bohemian Rhapsody")
+        val song2 = testSong(id = 2L, title = "Stairway to Heaven")
+        val state = MusicUiState(
+            songs = listOf(song1, song2),
+            playback = PlaybackUiState(queueMediaIds = listOf("1", "2")),
+            queueSearchQuery = "bohemian",
+        )
+
+        assertEquals(listOf(song1), state.filteredQueue)
+    }
+
+    @Test
+    fun `filteredQueue filters by artist case-insensitive`() {
+        val song1 = testSong(id = 1L, artist = "The Beatles")
+        val song2 = testSong(id = 2L, artist = "Pink Floyd")
+        val state = MusicUiState(
+            songs = listOf(song1, song2),
+            playback = PlaybackUiState(queueMediaIds = listOf("1", "2")),
+            queueSearchQuery = "beatles",
+        )
+
+        assertEquals(listOf(song1), state.filteredQueue)
+    }
+
+    @Test
+    fun `filteredQueue does not match by album`() {
+        val song1 = testSong(id = 1L, album = "Dark Side of the Moon")
+        val song2 = testSong(id = 2L, album = "The Wall")
+        val state = MusicUiState(
+            songs = listOf(song1, song2),
+            playback = PlaybackUiState(queueMediaIds = listOf("1", "2")),
+            queueSearchQuery = "dark",
+        )
+
+        // filteredQueue only matches title/artist, not album
+        assertEquals(emptyList<Song>(), state.filteredQueue)
+    }
+
+    @Test
+    fun `filteredQueue filters by partial match`() {
+        val song1 = testSong(id = 1L, title = "Something")
+        val song2 = testSong(id = 2L, title = "Somewhere")
+        val song3 = testSong(id = 3L, title = "Nothing")
+        val state = MusicUiState(
+            songs = listOf(song1, song2, song3),
+            playback = PlaybackUiState(queueMediaIds = listOf("1", "2", "3")),
+            queueSearchQuery = "some",
+        )
+
+        assertEquals(listOf(song1, song2), state.filteredQueue)
+    }
+
+    @Test
+    fun `filteredQueue preserves queue order not alphabetical order`() {
+        val song1 = testSong(id = 1L, title = "Zebra")
+        val song2 = testSong(id = 2L, title = "Apple")
+        val song3 = testSong(id = 3L, title = "Banana")
+        val state = MusicUiState(
+            songs = listOf(song1, song2, song3),
+            // Queue order: Zebra, Apple, Banana (not alphabetical)
+            playback = PlaybackUiState(queueMediaIds = listOf("1", "2", "3")),
+            queueSearchQuery = "",
+        )
+
+        assertEquals(listOf(song1, song2, song3), state.filteredQueue)
+    }
+
+    @Test
+    fun `filteredQueue returns empty list when nothing matches`() {
+        val song1 = testSong(id = 1L, title = "Song One", artist = "Artist A")
+        val state = MusicUiState(
+            songs = listOf(song1),
+            playback = PlaybackUiState(queueMediaIds = listOf("1")),
+            queueSearchQuery = "nonexistent",
+        )
+
+        assertEquals(emptyList<Song>(), state.filteredQueue)
+    }
+
+    @Test
+    fun `filteredQueue reflects the unfiltered queue mapping including missing songs`() {
+        val song1 = testSong(id = 1L, title = "Track A")
+        val song3 = testSong(id = 3L, title = "Track C")
+        val state = MusicUiState(
+            songs = listOf(song1, song3),
+            // Queue references song 2, which no longer exists in songs
+            playback = PlaybackUiState(queueMediaIds = listOf("1", "2", "3")),
+            queueSearchQuery = "track",
+        )
+
+        assertEquals(listOf(song1, song3), state.filteredQueue)
+    }
+
     // ==================== favoriteSongs tests ====================
 
     @Test
