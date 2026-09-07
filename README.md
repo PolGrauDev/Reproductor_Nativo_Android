@@ -26,11 +26,12 @@ pantalla de bloqueo.
 >
 > Este es un **proyecto personal en construcción**, pensado para mi portfolio como
 > desarrollador Android. Ya es funcional en el día a día (biblioteca, reproducción,
-> favoritos, listas, ajustes...), pero **todavía le faltan piezas** antes de considerarlo
-> "terminado": no tiene build de release firmado, la cobertura de tests es mínima, y
-> algunas ideas de la lista de más abajo siguen pendientes. Si lo estás mirando como
-> muestra de código, ten esto en cuenta — y si algo te llama la atención (para bien o para
-> mal), los issues son bienvenidos.
+> favoritos, listas, ajustes, estilos visuales...), pero **todavía le faltan piezas**
+> antes de considerarlo "terminado": no tiene build de release firmado, no hay tests
+> instrumentados (los unitarios ya cubren buena parte de la lógica), y algunas ideas de
+> la lista de más abajo siguen pendientes. Si lo estás mirando como muestra de código,
+> ten esto en cuenta — y si algo te llama la atención (para bien o para mal), los issues
+> son bienvenidos.
 
 ## 📱 Capturas de pantalla
 
@@ -50,9 +51,14 @@ _Próximamente — capturas de pantalla en camino._
 - 🎧 **Biblioteca completa**: explora tu música por canciones, álbumes, artistas y
   carpetas, leída directamente de `MediaStore` (sin servidor, sin base de datos propia
   de metadatos).
-- 🔍 **Búsqueda y orden**: filtra la biblioteca por texto y ordena por título, fecha de
-  añadido o duración.
+- 🔍 **Búsqueda y orden**: filtra la biblioteca por texto (también accesible con un toque
+  desde la pantalla de reproducción) y ordena por título, fecha de añadido o duración; la
+  cola de reproducción tiene su propio buscador independiente para localizar una canción
+  sin perder el orden real de la cola.
 - ❤️ **Favoritos** y **listas de reproducción** propias, persistidas con Room.
+- 🎨 **Estilos visuales seleccionables**: tres temas completos — Papel, Stickers y
+  Fanzine — con tipografías propias, elegibles desde Ajustes y aplicados de forma
+  consistente en toda la app.
 - 📜 **Cola de reproducción reordenable**, con **shuffle** y **repeat** (off/todo/uno),
   también controlables desde la notificación multimedia.
 - 🔔 **Reproducción en segundo plano** real vía `MediaSessionService`, con controles en
@@ -131,10 +137,11 @@ automático) y ejecutar desde ahí.
 ## 🗺️ Roadmap / Pendiente
 
 - [ ] Firma de build de release (`signingConfigs`)
-- [ ] Tests unitarios e instrumentados más allá de las plantillas por defecto — ya cubiertos:
-  lógica pura de reproducción (`PlaybackScheduling`) y los repositorios de datos
-  (`PlaylistRepository`, `SettingsRepository`); pendientes: `MusicViewModel`, `MediaRepository`,
-  `PlaybackConnection`/`PlaybackService` y las pantallas Compose
+- [ ] Tests instrumentados más allá de la plantilla por defecto — los unitarios ya cubren
+  buena parte de la capa de datos y lógica pura (`MediaRepository`, `PlaylistRepository`,
+  `SettingsRepository`, la lógica extraíble de `PlaybackConnection`/`PlaybackService`/
+  `PlaybackScheduling`, y las propiedades derivadas de `MusicViewModel`); pendiente:
+  tests de integración con un `MediaController` real y de las pantallas Compose
 - [ ] Capturas de pantalla y material gráfico para este README
 - [ ] Pulido general de UI/UX y posibles nuevas funcionalidades
 

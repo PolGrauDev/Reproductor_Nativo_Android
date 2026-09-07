@@ -25,8 +25,9 @@ with full background playback, notification and lock-screen support.
 >
 > This is a **personal project under construction**, built as a portfolio piece to
 > showcase my Android development work. It's already usable day-to-day (library,
-> playback, favorites, playlists, settings...), but it's **not feature-complete yet**:
-> there's no signed release build, test coverage is minimal, and some items in the
+> playback, favorites, playlists, settings, visual styles...), but it's **not
+> feature-complete yet**: there's no signed release build, there are no instrumented
+> tests yet (unit tests already cover a good part of the logic), and some items in the
 > roadmap below are still pending. If you're reviewing this as a code sample, keep that
 > in mind — and if something stands out (good or bad), issues are welcome.
 
@@ -47,9 +48,13 @@ _Coming soon — screenshots on the way._
 
 - 🎧 **Full library browsing**: songs, albums, artists and folders, read directly from
   `MediaStore` (no server, no separate metadata database).
-- 🔍 **Search and sorting**: filter the library by text and sort by title, date added, or
-  duration.
+- 🔍 **Search and sorting**: filter the library by text (also reachable with one tap from
+  the Now Playing screen) and sort by title, date added, or duration; the playback queue
+  has its own independent search to find a track without losing the queue's real order.
 - ❤️ **Favorites** and custom **playlists**, persisted with Room.
+- 🎨 **Selectable visual styles**: three complete themes — Papel, Stickers and Fanzine —
+  with their own typography, chosen from Settings and applied consistently across the
+  whole app.
 - 📜 **Reorderable playback queue**, with **shuffle** and **repeat** (off/all/one), also
   controllable from the media notification.
 - 🔔 **True background playback** via `MediaSessionService`, with controls on the
@@ -126,10 +131,11 @@ it from there.
 ## 🗺️ Roadmap / TODO
 
 - [ ] Release build signing (`signingConfigs`)
-- [ ] Unit and instrumented tests beyond the default templates — already covered: pure
-  playback logic (`PlaybackScheduling`) and the data repositories (`PlaylistRepository`,
-  `SettingsRepository`); still pending: `MusicViewModel`, `MediaRepository`,
-  `PlaybackConnection`/`PlaybackService`, and the Compose screens
+- [ ] Instrumented tests beyond the default template — unit tests already cover a good
+  part of the data/logic layer (`MediaRepository`, `PlaylistRepository`,
+  `SettingsRepository`, the extractable logic in `PlaybackConnection`/`PlaybackService`/
+  `PlaybackScheduling`, and `MusicViewModel`'s derived properties); still pending:
+  integration tests against a real `MediaController` and the Compose screens
 - [ ] Screenshots and visual material for this README
 - [ ] General UI/UX polish and possible new features
 
