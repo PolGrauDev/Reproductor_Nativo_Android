@@ -1,6 +1,7 @@
 package com.PolGrauDev.reproductor_nativo_android.data
 
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.AppStyle
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -66,5 +67,17 @@ class SettingsRepositoryTest {
         repository.setSleepTimerDefaultMinutes(15)
 
         assertEquals(15, repository.sleepTimerDefaultMinutes.first())
+    }
+
+    @Test
+    fun `appStyle defaults to PAPEL`() = runTest {
+        assertEquals(AppStyle.PAPEL, repository.appStyle.first())
+    }
+
+    @Test
+    fun `setAppStyle updates the flow`() = runTest {
+        repository.setAppStyle(AppStyle.FANZINE)
+
+        assertEquals(AppStyle.FANZINE, repository.appStyle.first())
     }
 }

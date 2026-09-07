@@ -17,6 +17,7 @@ import com.PolGrauDev.reproductor_nativo_android.data.model.toArtistGroups
 import com.PolGrauDev.reproductor_nativo_android.data.model.toFolderGroups
 import com.PolGrauDev.reproductor_nativo_android.player.PlaybackConnection
 import com.PolGrauDev.reproductor_nativo_android.player.PlaybackUiState
+import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.AppStyle
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -35,6 +36,7 @@ data class MusicUiState(
     val sortOrder: SortOrder = SortOrder.TITLE,
     val fadeDurationMs: Int = 0,
     val sleepTimerDefaultMinutes: Int = 30,
+    val appStyle: AppStyle = AppStyle.PAPEL,
 ) {
     val currentSong: Song?
         get() = songs.firstOrNull { it.id.toString() == playback.currentMediaId }
@@ -85,6 +87,7 @@ private data class LibraryExtras(
 private data class SettingsExtras(
     val fadeDurationMs: Int,
     val sleepTimerDefaultMinutes: Int,
+    val appStyle: AppStyle,
 )
 
 private data class CombinedExtras(
@@ -117,7 +120,10 @@ class MusicViewModel(
     private val settingsExtras = combine(
         settingsRepository.fadeDurationMs,
         settingsRepository.sleepTimerDefaultMinutes,
-    ) { fadeDurationMs, sleepTimerDefaultMinutes -> SettingsExtras(fadeDurationMs, sleepTimerDefaultMinutes) }
+        settingsRepository.appStyle,
+    ) { fadeDurationMs, sleepTimerDefaultMinutes, appStyle ->
+        SettingsExtras(fadeDurationMs, sleepTimerDefaultMinutes, appStyle)
+    }
 
     private val combinedExtras = combine(
         libraryExtras,
@@ -141,6 +147,7 @@ class MusicViewModel(
             sortOrder = extras.library.sortOrder,
             fadeDurationMs = extras.settings.fadeDurationMs,
             sleepTimerDefaultMinutes = extras.settings.sleepTimerDefaultMinutes,
+            appStyle = extras.settings.appStyle,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), MusicUiState())
 
@@ -197,6 +204,10 @@ class MusicViewModel(
 
     fun setFadeDurationMs(ms: Int) {
         viewModelScope.launch { settingsRepository.setFadeDurationMs(ms) }
+    }
+
+    fun setAppStyle(style: AppStyle) {
+        viewModelScope.launch { settingsRepository.setAppStyle(style) }
     }
 
     fun refreshLibrary() {

@@ -5,7 +5,9 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.AppStyle
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -27,6 +29,7 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
     private object Keys {
         val FADE_DURATION_MS = intPreferencesKey("fade_duration_ms")
         val SLEEP_TIMER_DEFAULT_MINUTES = intPreferencesKey("sleep_timer_default_minutes")
+        val APP_STYLE = stringPreferencesKey("app_style")
     }
 
     /** 0 = fundido desactivado. */
@@ -37,11 +40,23 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
     val sleepTimerDefaultMinutes: Flow<Int> =
         dataStore.data.map { it[Keys.SLEEP_TIMER_DEFAULT_MINUTES] ?: DEFAULT_SLEEP_TIMER_MINUTES }
 
+    /** Estilo visual elegido en Ajustes. Cae a [AppStyle.PAPEL] si no hay valor o es inválido. */
+    val appStyle: Flow<AppStyle> =
+        dataStore.data.map { prefs ->
+            prefs[Keys.APP_STYLE]?.let { name ->
+                runCatching { AppStyle.valueOf(name) }.getOrNull()
+            } ?: AppStyle.PAPEL
+        }
+
     suspend fun setFadeDurationMs(ms: Int) {
         dataStore.edit { it[Keys.FADE_DURATION_MS] = ms }
     }
 
     suspend fun setSleepTimerDefaultMinutes(minutes: Int) {
         dataStore.edit { it[Keys.SLEEP_TIMER_DEFAULT_MINUTES] = minutes }
+    }
+
+    suspend fun setAppStyle(style: AppStyle) {
+        dataStore.edit { it[Keys.APP_STYLE] = style.name }
     }
 }

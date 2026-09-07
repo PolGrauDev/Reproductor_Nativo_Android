@@ -1,159 +1,25 @@
 package com.PolGrauDev.reproductor_nativo_android.ui.screens
 
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.FavoriteBorder
-import androidx.compose.material.icons.filled.MusicNote
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil3.compose.AsyncImage
-import com.PolGrauDev.reproductor_nativo_android.data.AlbumArtRequest
-import com.PolGrauDev.reproductor_nativo_android.data.model.Song
-import com.PolGrauDev.reproductor_nativo_android.ui.components.AddToPlaylistDialog
+import com.PolGrauDev.reproductor_nativo_android.ui.screens.style.fanzine.ArtistDetailScreenFanzine
+import com.PolGrauDev.reproductor_nativo_android.ui.screens.style.papel.ArtistDetailScreenPapel
+import com.PolGrauDev.reproductor_nativo_android.ui.screens.style.sticker.ArtistDetailScreenSticker
+import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.AppStyle
 import com.PolGrauDev.reproductor_nativo_android.viewmodel.MusicViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
+/**
+ * Thin dispatcher over the three bespoke visual styles — see `ui/screens/style/<style>/
+ * DetailScreensX.kt` for the actual per-style implementations (same structure as Album/Playlist,
+ * retthemed per style — no bespoke mockup exists for this screen).
+ */
 @Composable
-fun ArtistDetailScreen(
-    viewModel: MusicViewModel,
-    artistId: Long?,
-    onBack: () -> Unit,
-    onSongClick: () -> Unit,
-) {
+fun ArtistDetailScreen(viewModel: MusicViewModel, artistId: Long?, onBack: () -> Unit, onSongClick: () -> Unit) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val artist = uiState.artists.firstOrNull { it.artistId == artistId }
-    var songForPlaylistDialog by remember { mutableStateOf<Song?>(null) }
-
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(artist?.name ?: "Artista") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
-                    }
-                },
-            )
-        },
-    ) { padding ->
-        if (artist == null) {
-            Box(
-                modifier = Modifier.fillMaxSize().padding(padding),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text("Artista no encontrado")
-            }
-            return@Scaffold
-        }
-
-        LazyColumn(modifier = Modifier.fillMaxSize().padding(padding)) {
-            items(artist.songs, key = { it.id }) { song ->
-                ArtistSongRow(
-                    song = song,
-                    isPlaying = uiState.currentSong?.id == song.id && uiState.playback.isPlaying,
-                    isFavorite = song.id in uiState.favoriteSongIds,
-                    onClick = {
-                        viewModel.playSong(song, fromList = artist.songs)
-                        onSongClick()
-                    },
-                    onToggleFavorite = { viewModel.toggleFavorite(song.id) },
-                    onAddToPlaylist = { songForPlaylistDialog = song },
-                )
-            }
-        }
-    }
-
-    songForPlaylistDialog?.let { song ->
-        AddToPlaylistDialog(
-            playlists = uiState.playlists,
-            onDismiss = { songForPlaylistDialog = null },
-            onPlaylistSelected = { playlistId ->
-                viewModel.addSongToPlaylist(playlistId, song.id)
-                songForPlaylistDialog = null
-            },
-            onCreatePlaylist = { name ->
-                viewModel.createPlaylistAndAddSong(name, song.id)
-                songForPlaylistDialog = null
-            },
-        )
-    }
-}
-
-@Composable
-private fun ArtistSongRow(
-    song: Song,
-    isPlaying: Boolean,
-    isFavorite: Boolean,
-    onClick: () -> Unit,
-    onToggleFavorite: () -> Unit,
-    onAddToPlaylist: () -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 8.dp, vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        AsyncImage(
-            model = AlbumArtRequest(song.contentUri),
-            contentDescription = null,
-            modifier = Modifier.size(48.dp).clip(RoundedCornerShape(4.dp)),
-            contentScale = ContentScale.Crop,
-        )
-        Spacer(Modifier.width(12.dp))
-        Column(Modifier.weight(1f)) {
-            Text(song.title, style = MaterialTheme.typography.bodyLarge, maxLines = 1)
-            Text(
-                song.album,
-                style = MaterialTheme.typography.bodyMedium,
-                maxLines = 1,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        if (isPlaying) {
-            Icon(Icons.Filled.MusicNote, contentDescription = "Reproduciendo")
-        }
-        IconButton(onClick = onToggleFavorite) {
-            Icon(
-                if (isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-                contentDescription = if (isFavorite) "Quitar de favoritos" else "Añadir a favoritos",
-                tint = if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        IconButton(onClick = onAddToPlaylist) {
-            Icon(Icons.AutoMirrored.Filled.PlaylistAdd, contentDescription = "Añadir a playlist")
-        }
+    when (uiState.appStyle) {
+        AppStyle.PAPEL -> ArtistDetailScreenPapel(viewModel, artistId, onBack, onSongClick)
+        AppStyle.STICKERS -> ArtistDetailScreenSticker(viewModel, artistId, onBack, onSongClick)
+        AppStyle.FANZINE -> ArtistDetailScreenFanzine(viewModel, artistId, onBack, onSongClick)
     }
 }
