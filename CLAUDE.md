@@ -211,8 +211,10 @@ SettingsRepository (DataStore: fade
   takes an optional queue scope — `AlbumDetailScreen`/`ArtistDetailScreen` pass the group's own
   song list so playing from a group's detail screen queues just that group, not the whole
   library. A second, separate search field — `queueSearchQuery` (own `MutableStateFlow<String>`,
-  folded into the existing `libraryExtras` combine bucket alongside `searchQuery`) and the derived
-  `MusicUiState.filteredQueue` (filters `queue` by title/artist, case-insensitive; returns `queue`
+  folded into the existing `libraryExtras` combine bucket alongside `favoriteSongIds`/`playlists`/
+  `sortOrder` — not alongside `searchQuery`, which is a sibling top-level flow that only meets
+  `libraryExtras`'s combined output at the outer 5-argument `combine()` that builds `uiState`) and
+  the derived `MusicUiState.filteredQueue` (filters `queue` by title/artist, case-insensitive; returns `queue`
   unfiltered when blank) — is scoped to *only* the current playback queue, independent of the
   library-wide `searchQuery`/`filteredSongs`. `QueueScreen*`'s search field writes to it via
   `viewModel::setQueueSearchQuery`. Because `filteredQueue` is a different list (and order) than
