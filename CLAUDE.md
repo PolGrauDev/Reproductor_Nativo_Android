@@ -84,12 +84,15 @@ SettingsRepository (DataStore: fade
   `SettingsExtras` combine bucket described under `data/SettingsRepository` below. It's selected
   from `ui/screens/SettingsScreen` (`onSetAppStyle` wired to `MusicViewModel.setAppStyle`).
   Every screen file under `ui/screens/*.kt` and `ui/components/AddToPlaylistDialog.kt` is a thin
-  dispatcher: it reads `uiState.appStyle` and `when`-branches to a per-style implementation
+  dispatcher: it `when`-branches to a per-style implementation
   (`LibraryScreen` → `LibraryScreenPapel`/`LibraryScreenSticker`/`LibraryScreenFanzine` in
   `ui/screens/style/{papel,sticker,fanzine}/`; likewise `AddToPlaylistDialog` →
   `AddToPlaylistDialogPapel`/`...Sticker`/`...Fanzine` in
   `ui/components/style/{papel,sticker,fanzine}/`) — the dispatcher file itself has no styling
-  logic, just prop forwarding. Each style's design tokens (colors, type scale, custom
+  logic, just prop forwarding. Most dispatchers read `uiState.appStyle` directly; the exception
+  is `AddToPlaylistDialog`, which has no `MusicViewModel`/`uiState` of its own — it takes
+  `appStyle: AppStyle` as a plain function parameter, with the caller passing `uiState.appStyle`
+  in. Each style's design tokens (colors, type scale, custom
   `FontFamily`s, shapes) live in their own `ui/theme/style/<style>/*Tokens.kt` (e.g.
   `PapelTokens.kt` defines `PapelColors`/`PapelFonts`/`PapelType`). Custom fonts are loaded via
   `FontFamily(Font(R.font....))` from `.ttf` files in `res/font/` (Anton, Fredoka, Gaegu,
@@ -220,9 +223,11 @@ SettingsRepository (DataStore: fade
   `viewModel::setQueueSearchQuery`. Because `filteredQueue` is a different list (and order) than
   `queue`, each `QueueScreen*` style implementation maps a filtered-list row back to its real
   queue index via `queue.indexOf(song)` before calling `playQueueItem`/`moveQueueItem` — see
-  `QueueScreenPapel`'s `realIndex` — and hides the reorder up/down affordances entirely while a
+  `QueueScreenPapel`'s `realIndex` — and hides only the reorder up/down affordances while a
   search is active (`isSearching`), since reordering a filtered subview against the real queue's
-  indices would be confusing and isn't needed for a search-to-play use case.
+  indices would be confusing and isn't needed for a search-to-play use case. The "Quitar de la
+  cola" remove icon stays visible and functional during search — it already operates on the
+  resolved `realIndex`, not the filtered display index, so hiding it was never necessary.
 - **`data/db/` (Room) + `data/PlaylistRepository`** — the persistence layer for relational data
   (favorites/playlists). `data/SettingsRepository` (DataStore Preferences, see below) persists
   simple scalar app settings. Together these are the only persistence layers in the app;
