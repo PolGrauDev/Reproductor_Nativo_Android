@@ -105,23 +105,53 @@ class MediaRepository(private val context: Context) {
                 val dateAddedCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATE_ADDED)
 
                 while (cursor.moveToNext()) {
-                    val id = cursor.getLong(idCol)
-                    val year = cursor.getInt(yearCol).takeIf { it > 0 }
-                    songs += Song(
-                        id = id,
-                        title = cursor.getString(titleCol) ?: "",
-                        artist = cursor.getString(artistCol) ?: "",
-                        album = cursor.getString(albumCol) ?: "",
-                        year = year,
-                        durationMs = cursor.getLong(durationCol),
-                        albumId = cursor.getLong(albumIdCol).takeIf { it > 0 },
-                        artistId = cursor.getLong(artistIdCol).takeIf { it > 0 },
-                        contentUri = ContentUris.withAppendedId(collection, id),
-                        filePath = cursor.getString(dataCol) ?: "",
-                        dateAddedSec = cursor.getLong(dateAddedCol),
+                    songs += songFromCursor(
+                        cursor,
+                        collection,
+                        idCol,
+                        titleCol,
+                        artistCol,
+                        albumCol,
+                        yearCol,
+                        durationCol,
+                        albumIdCol,
+                        artistIdCol,
+                        dataCol,
+                        dateAddedCol,
                     )
                 }
             }
         return songs
     }
+}
+
+internal fun songFromCursor(
+    cursor: android.database.Cursor,
+    collection: android.net.Uri,
+    idCol: Int,
+    titleCol: Int,
+    artistCol: Int,
+    albumCol: Int,
+    yearCol: Int,
+    durationCol: Int,
+    albumIdCol: Int,
+    artistIdCol: Int,
+    dataCol: Int,
+    dateAddedCol: Int,
+): Song {
+    val id = cursor.getLong(idCol)
+    val year = cursor.getInt(yearCol).takeIf { it > 0 }
+    return Song(
+        id = id,
+        title = cursor.getString(titleCol) ?: "",
+        artist = cursor.getString(artistCol) ?: "",
+        album = cursor.getString(albumCol) ?: "",
+        year = year,
+        durationMs = cursor.getLong(durationCol),
+        albumId = cursor.getLong(albumIdCol).takeIf { it > 0 },
+        artistId = cursor.getLong(artistIdCol).takeIf { it > 0 },
+        contentUri = ContentUris.withAppendedId(collection, id),
+        filePath = cursor.getString(dataCol) ?: "",
+        dateAddedSec = cursor.getLong(dateAddedCol),
+    )
 }
