@@ -171,13 +171,13 @@ private fun PapelQueueRow(
                     tint = if (canMoveDown) PapelColors.OnSurface else PapelColors.Faint,
                     modifier = Modifier.clickable(enabled = canMoveDown, onClick = onMoveDown).padding(6.dp),
                 )
-                Icon(
-                    Icons.Filled.Close,
-                    contentDescription = "Quitar de la cola",
-                    tint = PapelColors.OnSurfaceVariant,
-                    modifier = Modifier.clickable(onClick = onRemove).padding(6.dp),
-                )
             }
+            Icon(
+                Icons.Filled.Close,
+                contentDescription = "Quitar de la cola",
+                tint = PapelColors.OnSurfaceVariant,
+                modifier = Modifier.clickable(onClick = onRemove).padding(6.dp),
+            )
         }
         PapelRowDivider()
     }

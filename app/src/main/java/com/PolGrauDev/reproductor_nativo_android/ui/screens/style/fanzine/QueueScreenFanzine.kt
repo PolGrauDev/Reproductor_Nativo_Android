@@ -112,13 +112,13 @@ fun QueueScreenFanzine(viewModel: MusicViewModel, onBack: () -> Unit) {
                             tint = if (index < displayQueue.lastIndex) tint else tint.copy(alpha = 0.4f),
                             modifier = Modifier.clickable(enabled = index < displayQueue.lastIndex) { viewModel.moveQueueItem(realIndex, realIndex + 1) }.padding(4.dp),
                         )
-                        Icon(
-                            Icons.Filled.Close,
-                            contentDescription = "Quitar de la cola",
-                            tint = if (isCurrent) FanzineColors.Ink else FanzineColors.Red,
-                            modifier = Modifier.clickable { viewModel.removeFromQueue(realIndex) }.padding(4.dp),
-                        )
                     }
+                    Icon(
+                        Icons.Filled.Close,
+                        contentDescription = "Quitar de la cola",
+                        tint = if (isCurrent) FanzineColors.Ink else FanzineColors.Red,
+                        modifier = Modifier.clickable { viewModel.removeFromQueue(realIndex) }.padding(4.dp),
+                    )
                 }
             }
         }

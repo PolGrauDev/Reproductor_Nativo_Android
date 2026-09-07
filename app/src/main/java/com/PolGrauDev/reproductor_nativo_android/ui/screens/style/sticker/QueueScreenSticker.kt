@@ -112,13 +112,13 @@ fun QueueScreenSticker(viewModel: MusicViewModel, onBack: () -> Unit) {
                                 tint = if (index < displayQueue.lastIndex) iconTint else iconTint.copy(alpha = 0.4f),
                                 modifier = Modifier.clickable(enabled = index < displayQueue.lastIndex) { viewModel.moveQueueItem(realIndex, realIndex + 1) }.padding(4.dp),
                             )
-                            Icon(
-                                Icons.Filled.Close,
-                                contentDescription = "Quitar de la cola",
-                                tint = if (isCurrent) Color.White else StickerColors.Pink,
-                                modifier = Modifier.clickable { viewModel.removeFromQueue(realIndex) }.padding(4.dp),
-                            )
                         }
+                        Icon(
+                            Icons.Filled.Close,
+                            contentDescription = "Quitar de la cola",
+                            tint = if (isCurrent) Color.White else StickerColors.Pink,
+                            modifier = Modifier.clickable { viewModel.removeFromQueue(realIndex) }.padding(4.dp),
+                        )
                     }
                 }
             }
