@@ -338,7 +338,7 @@ class PlaybackConnection(private val context: Context) {
     }
 }
 
-private fun PlaybackException.toUserMessage(songTitle: String?): String {
+internal fun PlaybackException.toUserMessage(songTitle: String?): String {
     val prefix = songTitle?.takeIf { it.isNotBlank() }?.let { "\"$it\": " } ?: ""
     val reason = when (errorCode) {
         PlaybackException.ERROR_CODE_IO_FILE_NOT_FOUND -> "no se encuentra el archivo"

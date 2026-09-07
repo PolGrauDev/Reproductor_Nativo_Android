@@ -86,7 +86,7 @@ class PlaybackService : MediaSessionService() {
     }
 
     /** Mismo orden de ciclo que [PlaybackConnection.cycleRepeatMode]: sin repetir -> todo -> una -> sin repetir. */
-    private fun nextRepeatMode(current: Int): Int = when (current) {
+    internal fun nextRepeatMode(current: Int): Int = when (current) {
         Player.REPEAT_MODE_OFF -> Player.REPEAT_MODE_ALL
         Player.REPEAT_MODE_ALL -> Player.REPEAT_MODE_ONE
         else -> Player.REPEAT_MODE_OFF
