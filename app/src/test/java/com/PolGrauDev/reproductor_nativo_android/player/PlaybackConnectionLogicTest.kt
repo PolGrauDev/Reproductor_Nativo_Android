@@ -1,7 +1,6 @@
 package com.PolGrauDev.reproductor_nativo_android.player
 
 import androidx.media3.common.PlaybackException
-import androidx.test.core.app.ApplicationProvider
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith

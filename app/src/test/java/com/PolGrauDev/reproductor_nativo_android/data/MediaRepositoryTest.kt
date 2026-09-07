@@ -28,7 +28,6 @@ class MediaRepositoryTest {
             MediaStore.Audio.Media.DATE_ADDED,
         )
         val cursor = MatrixCursor(columns)
-        @Suppress("UNCHECKED_CAST")
         val rowData: Array<Any?> = arrayOf(
             123L,                      // _ID
             "Song Title",               // TITLE
@@ -88,7 +87,6 @@ class MediaRepositoryTest {
             MediaStore.Audio.Media.DATE_ADDED,
         )
         val cursor = MatrixCursor(columns)
-        @Suppress("UNCHECKED_CAST")
         val rowData: Array<Any?> = arrayOf(
             456L,                       // _ID
             "Another Song",             // TITLE
@@ -148,7 +146,6 @@ class MediaRepositoryTest {
             MediaStore.Audio.Media.DATE_ADDED,
         )
         val cursor = MatrixCursor(columns)
-        @Suppress("UNCHECKED_CAST")
         val rowData: Array<Any?> = arrayOf(
             789L,                       // _ID
             "Complete Song",            // TITLE

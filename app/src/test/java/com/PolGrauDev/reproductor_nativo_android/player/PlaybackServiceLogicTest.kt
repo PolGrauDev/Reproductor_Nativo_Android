@@ -1,7 +1,6 @@
 package com.PolGrauDev.reproductor_nativo_android.player
 
 import androidx.media3.common.Player
-import androidx.test.core.app.ApplicationProvider
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
@@ -40,7 +39,7 @@ class PlaybackServiceLogicTest {
     }
 
     @Test
-    fun `nextRepeatMode handles any other mode as OFF and cycles to ALL`() {
+    fun `nextRepeatMode maps any unknown mode to OFF`() {
         // Any mode other than REPEAT_MODE_OFF or REPEAT_MODE_ALL should cycle back to OFF
         val next = service.nextRepeatMode(999)
 
