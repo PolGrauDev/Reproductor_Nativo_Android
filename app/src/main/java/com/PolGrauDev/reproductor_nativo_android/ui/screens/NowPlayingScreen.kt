@@ -15,12 +15,12 @@ import com.PolGrauDev.reproductor_nativo_android.viewmodel.MusicViewModel
  * canvas's `1c`/`2a`/`3a` mockups).
  */
 @Composable
-fun NowPlayingScreen(viewModel: MusicViewModel, onBack: () -> Unit, onQueueClick: () -> Unit) {
+fun NowPlayingScreen(viewModel: MusicViewModel, onBack: () -> Unit, onQueueClick: () -> Unit, onSearchClick: () -> Unit) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     when (uiState.appStyle) {
-        AppStyle.PAPEL -> NowPlayingScreenPapel(viewModel, uiState, onBack, onQueueClick)
-        AppStyle.STICKERS -> NowPlayingScreenSticker(viewModel, uiState, onBack, onQueueClick)
-        AppStyle.FANZINE -> NowPlayingScreenFanzine(viewModel, uiState, onBack, onQueueClick)
+        AppStyle.PAPEL -> NowPlayingScreenPapel(viewModel, uiState, onBack, onQueueClick, onSearchClick)
+        AppStyle.STICKERS -> NowPlayingScreenSticker(viewModel, uiState, onBack, onQueueClick, onSearchClick)
+        AppStyle.FANZINE -> NowPlayingScreenFanzine(viewModel, uiState, onBack, onQueueClick, onSearchClick)
     }
 }

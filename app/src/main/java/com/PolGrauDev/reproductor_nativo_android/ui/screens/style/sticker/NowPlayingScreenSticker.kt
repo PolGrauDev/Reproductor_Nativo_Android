@@ -30,6 +30,7 @@ import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.RepeatOne
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
@@ -61,7 +62,7 @@ import com.PolGrauDev.reproductor_nativo_android.viewmodel.MusicUiState
 import com.PolGrauDev.reproductor_nativo_android.viewmodel.MusicViewModel
 
 @Composable
-fun NowPlayingScreenSticker(viewModel: MusicViewModel, uiState: MusicUiState, onBack: () -> Unit, onQueueClick: () -> Unit) {
+fun NowPlayingScreenSticker(viewModel: MusicViewModel, uiState: MusicUiState, onBack: () -> Unit, onQueueClick: () -> Unit, onSearchClick: () -> Unit) {
     val song = uiState.currentSong
     var isUserSeeking by remember { mutableStateOf(false) }
     var seekFraction by remember { mutableFloatStateOf(0f) }
@@ -80,6 +81,12 @@ fun NowPlayingScreenSticker(viewModel: MusicViewModel, uiState: MusicUiState, on
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                 modifier = Modifier.weight(1f),
             )
+            StickerHardShadowBox(modifier = Modifier.size(40.dp), shape = RoundedCornerShape(14.dp)) {
+                Box(Modifier.fillMaxSize().clickable(onClick = onSearchClick), contentAlignment = Alignment.Center) {
+                    Icon(Icons.Filled.Search, contentDescription = "Buscar", tint = StickerColors.Ink)
+                }
+            }
+            Spacer(Modifier.width(10.dp))
             StickerHardShadowBox(modifier = Modifier.size(40.dp), shape = RoundedCornerShape(14.dp)) {
                 Box(Modifier.fillMaxSize().clickable(onClick = onQueueClick), contentAlignment = Alignment.Center) {
                     Icon(Icons.AutoMirrored.Filled.QueueMusic, contentDescription = "Ver cola", tint = StickerColors.Ink)

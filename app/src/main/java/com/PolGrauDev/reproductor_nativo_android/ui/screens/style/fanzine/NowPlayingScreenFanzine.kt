@@ -30,6 +30,7 @@ import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.RepeatOne
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
@@ -61,7 +62,7 @@ import com.PolGrauDev.reproductor_nativo_android.viewmodel.MusicUiState
 import com.PolGrauDev.reproductor_nativo_android.viewmodel.MusicViewModel
 
 @Composable
-fun NowPlayingScreenFanzine(viewModel: MusicViewModel, uiState: MusicUiState, onBack: () -> Unit, onQueueClick: () -> Unit) {
+fun NowPlayingScreenFanzine(viewModel: MusicViewModel, uiState: MusicUiState, onBack: () -> Unit, onQueueClick: () -> Unit, onSearchClick: () -> Unit) {
     val song = uiState.currentSong
     var isUserSeeking by remember { mutableStateOf(false) }
     var seekFraction by remember { mutableFloatStateOf(0f) }
@@ -82,6 +83,13 @@ fun NowPlayingScreenFanzine(viewModel: MusicViewModel, uiState: MusicUiState, on
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                 modifier = Modifier.weight(1f),
             )
+            Icon(
+                Icons.Filled.Search,
+                contentDescription = "Buscar",
+                tint = FanzineColors.Ink,
+                modifier = Modifier.size(36.dp).rotate(-2f).background(FanzineColors.Paper).clickable(onClick = onSearchClick).padding(7.dp),
+            )
+            Spacer(Modifier.width(10.dp))
             Icon(
                 Icons.AutoMirrored.Filled.QueueMusic,
                 contentDescription = "Ver cola",

@@ -67,6 +67,9 @@ fun NavGraph(
                 viewModel = viewModel,
                 onBack = { navController.popBackStack() },
                 onQueueClick = { navController.navigate(Routes.QUEUE) },
+                onSearchClick = {
+                    navController.navigate(Routes.SONG_LIST) { popUpTo(Routes.SONG_LIST) { inclusive = true } }
+                },
             )
         }
         composable(Routes.QUEUE) {
