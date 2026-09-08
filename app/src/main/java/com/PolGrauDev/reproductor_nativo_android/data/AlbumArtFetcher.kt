@@ -26,6 +26,14 @@ class AlbumArtKeyer : Keyer<AlbumArtRequest> {
  * Carga perezosa (por canción, con caché de Coil) de la carátula embebida vía
  * [AlbumArtExtractor], en vez de extraer el arte de toda la biblioteca por adelantado.
  */
+/**
+ * Ninguna carátula embebida se muestra a más de esto en la app (el arte grande de Now Playing
+ * ocupa como mucho ~70% del ancho de pantalla, las miniaturas de lista 40-50dp) — decodificar a
+ * resolución completa una portada de p.ej. 3000×3000 para una miniatura desperdicia memoria sin
+ * ninguna ganancia visual.
+ */
+private const val MAX_DECODED_DIMENSION_PX = 720
+
 class AlbumArtFetcher(
     private val request: AlbumArtRequest,
     private val options: Options,
@@ -33,11 +41,17 @@ class AlbumArtFetcher(
 
     override suspend fun fetch(): FetchResult? {
         val bytes = AlbumArtExtractor.extractEmbeddedArt(options.context, request.songUri) ?: return null
-        val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size) ?: return null
+
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+        val sampleSize = calculateInSampleSize(bounds.outWidth, bounds.outHeight, MAX_DECODED_DIMENSION_PX)
+
+        val decodeOptions = BitmapFactory.Options().apply { inSampleSize = sampleSize }
+        val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size, decodeOptions) ?: return null
         val drawable = BitmapDrawable(options.context.resources, bitmap)
         return ImageFetchResult(
             image = drawable.asImage(),
-            isSampled = false,
+            isSampled = sampleSize > 1,
             dataSource = DataSource.DISK,
         )
     }
@@ -46,4 +60,18 @@ class AlbumArtFetcher(
         override fun create(data: AlbumArtRequest, options: Options, imageLoader: ImageLoader): Fetcher =
             AlbumArtFetcher(data, options)
     }
+}
+
+/** Potencia de 2 más grande que deja ambas dimensiones por encima de [maxDimension] tras dividir. */
+internal fun calculateInSampleSize(width: Int, height: Int, maxDimension: Int): Int {
+    if (width <= 0 || height <= 0) return 1
+    var sampleSize = 1
+    var w = width
+    var h = height
+    while (w / 2 >= maxDimension && h / 2 >= maxDimension) {
+        w /= 2
+        h /= 2
+        sampleSize *= 2
+    }
+    return sampleSize
 }

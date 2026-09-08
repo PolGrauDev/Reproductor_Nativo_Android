@@ -70,7 +70,7 @@ fun FavoritesScreenFanzine(viewModel: MusicViewModel, onBack: () -> Unit, onSong
             }
         } else {
             LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                itemsIndexed(favorites) { index, song ->
+                itemsIndexed(favorites, key = { _, song -> song.id }) { index, song ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()

@@ -44,6 +44,6 @@ class PlaylistRepository(
     suspend fun moveSong(playlistId: Long, songIds: List<Long>, from: Int, to: Int) {
         if (from == to || from !in songIds.indices || to !in songIds.indices) return
         val reordered = songIds.toMutableList().apply { add(to, removeAt(from)) }
-        reordered.forEachIndexed { index, songId -> playlistDao.updatePosition(playlistId, songId, index) }
+        playlistDao.updatePositions(playlistId, reordered.mapIndexed { index, songId -> songId to index })
     }
 }

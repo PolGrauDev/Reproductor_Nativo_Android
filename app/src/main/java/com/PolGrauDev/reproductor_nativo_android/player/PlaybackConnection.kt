@@ -31,8 +31,6 @@ import kotlinx.coroutines.withContext
 data class PlaybackUiState(
     val currentMediaId: String? = null,
     val isPlaying: Boolean = false,
-    val positionMs: Long = 0L,
-    val durationMs: Long = 0L,
     val playbackState: Int = Player.STATE_IDLE,
     val shuffleModeEnabled: Boolean = false,
     val repeatMode: Int = Player.REPEAT_MODE_OFF,
@@ -40,6 +38,19 @@ data class PlaybackUiState(
     val errorMessage: String? = null,
     val sleepTimerActive: Boolean = false,
     val sleepTimerRemainingMs: Long = 0L,
+)
+
+/**
+ * Posición/duración de reproducción, publicadas aparte de [PlaybackUiState] a propósito: se
+ * actualizan ~cada 500ms mientras suena algo (ver [togglePositionPolling]), y si vivieran en el
+ * mismo [StateFlow] que el resto del estado, cada pantalla que colecciona ese estado (biblioteca,
+ * detalles, favoritos...) recompondría entera en cada tick aunque no muestre la posición. Solo
+ * `NowPlayingScreen*` necesita esto, así que se expone como un flow independiente
+ * ([PlaybackConnection.progress] / [MusicViewModel.playbackProgress]).
+ */
+data class PlaybackProgress(
+    val positionMs: Long = 0L,
+    val durationMs: Long = 0L,
 )
 
 private const val MAX_CONSECUTIVE_ERRORS = 3
@@ -66,6 +77,9 @@ class PlaybackConnection(private val context: Context) {
     private val _state = MutableStateFlow(PlaybackUiState())
     val state: StateFlow<PlaybackUiState> = _state.asStateFlow()
 
+    private val _progress = MutableStateFlow(PlaybackProgress())
+    val progress: StateFlow<PlaybackProgress> = _progress.asStateFlow()
+
     private val playerListener = object : Player.Listener {
         override fun onIsPlayingChanged(isPlaying: Boolean) {
             if (isPlaying) consecutiveErrorCount = 0
@@ -74,9 +88,8 @@ class PlaybackConnection(private val context: Context) {
         }
 
         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
-            _state.update {
-                it.copy(currentMediaId = mediaItem?.mediaId, durationMs = safeDuration())
-            }
+            _state.update { it.copy(currentMediaId = mediaItem?.mediaId) }
+            _progress.update { it.copy(durationMs = safeDuration()) }
             refreshQueue()
             enrichCurrentItemArtwork()
             startFadeIn()
@@ -84,7 +97,8 @@ class PlaybackConnection(private val context: Context) {
         }
 
         override fun onPlaybackStateChanged(playbackState: Int) {
-            _state.update { it.copy(playbackState = playbackState, durationMs = safeDuration()) }
+            _state.update { it.copy(playbackState = playbackState) }
+            _progress.update { it.copy(durationMs = safeDuration()) }
             rescheduleFadeOut()
         }
 
@@ -250,6 +264,7 @@ class PlaybackConnection(private val context: Context) {
         controller = null
         controllerFuture = null
         _state.value = PlaybackUiState()
+        _progress.value = PlaybackProgress()
     }
 
     private fun syncState(c: MediaController) {
@@ -257,13 +272,15 @@ class PlaybackConnection(private val context: Context) {
             it.copy(
                 currentMediaId = c.currentMediaItem?.mediaId,
                 isPlaying = c.isPlaying,
-                positionMs = c.currentPosition.coerceAtLeast(0),
-                durationMs = c.duration.coerceAtLeast(0),
                 playbackState = c.playbackState,
                 shuffleModeEnabled = c.shuffleModeEnabled,
                 repeatMode = c.repeatMode,
             )
         }
+        _progress.value = PlaybackProgress(
+            positionMs = c.currentPosition.coerceAtLeast(0),
+            durationMs = c.duration.coerceAtLeast(0),
+        )
         refreshQueue()
         togglePositionPolling(c.isPlaying)
     }
@@ -290,7 +307,7 @@ class PlaybackConnection(private val context: Context) {
         positionJob = scope.launch {
             while (isActive) {
                 controller?.let { c ->
-                    _state.update { it.copy(positionMs = c.currentPosition.coerceAtLeast(0)) }
+                    _progress.update { it.copy(positionMs = c.currentPosition.coerceAtLeast(0)) }
                 }
                 delay(500)
             }

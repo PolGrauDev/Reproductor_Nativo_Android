@@ -72,7 +72,7 @@ fun FavoritesScreenSticker(viewModel: MusicViewModel, onBack: () -> Unit, onSong
                 }
             } else {
                 LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp, 0.dp, 16.dp, 90.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    itemsIndexed(favorites) { index, song ->
+                    itemsIndexed(favorites, key = { _, song -> song.id }) { index, song ->
                         StickerHardShadowBox(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), rotationDegrees = stickerTilt(index)) {
                             Row(
                                 modifier = Modifier.fillMaxWidth().clickable { viewModel.playSong(song, fromList = favorites); onSongClick() }.padding(9.dp, 9.dp, 12.dp, 9.dp),

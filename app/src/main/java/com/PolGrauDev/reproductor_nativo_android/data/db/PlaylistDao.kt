@@ -3,6 +3,7 @@ package com.PolGrauDev.reproductor_nativo_android.data.db
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
+import androidx.room.Transaction
 import com.PolGrauDev.reproductor_nativo_android.data.model.PlaylistSummary
 import kotlinx.coroutines.flow.Flow
 
@@ -47,4 +48,10 @@ interface PlaylistDao {
         "UPDATE playlist_song_cross_ref SET position = :position WHERE playlistId = :playlistId AND songId = :songId",
     )
     suspend fun updatePosition(playlistId: Long, songId: Long, position: Int)
+
+    /** Reasigna varias posiciones en una sola transacción — usado al reordenar una playlist. */
+    @Transaction
+    suspend fun updatePositions(playlistId: Long, positions: List<Pair<Long, Int>>) {
+        positions.forEach { (songId, position) -> updatePosition(playlistId, songId, position) }
+    }
 }

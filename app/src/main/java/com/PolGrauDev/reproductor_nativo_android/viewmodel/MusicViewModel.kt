@@ -16,6 +16,7 @@ import com.PolGrauDev.reproductor_nativo_android.data.model.toAlbumGroups
 import com.PolGrauDev.reproductor_nativo_android.data.model.toArtistGroups
 import com.PolGrauDev.reproductor_nativo_android.data.model.toFolderGroups
 import com.PolGrauDev.reproductor_nativo_android.player.PlaybackConnection
+import com.PolGrauDev.reproductor_nativo_android.player.PlaybackProgress
 import com.PolGrauDev.reproductor_nativo_android.player.PlaybackUiState
 import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.AppStyle
 import kotlinx.coroutines.flow.Flow
@@ -118,6 +119,14 @@ class MusicViewModel(
 ) : ViewModel() {
 
     private val playbackConnection = PlaybackConnection(applicationContext)
+
+    /**
+     * Posición/duración de reproducción, expuestas aparte de [uiState] a propósito: cambian
+     * ~cada 500ms mientras suena algo, y solo `NowPlayingScreen*` las necesita — meterlas en el
+     * combine general recompondría cada pantalla que colecciona [uiState] en cada tick.
+     */
+    val playbackProgress: StateFlow<PlaybackProgress> = playbackConnection.progress
+
     private val isLoadingLibrary = MutableStateFlow(true)
     private val searchQuery = MutableStateFlow("")
     private val sortOrder = MutableStateFlow(SortOrder.TITLE)

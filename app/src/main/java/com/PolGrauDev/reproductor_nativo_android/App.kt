@@ -5,12 +5,14 @@ import android.content.Context
 import androidx.room.Room
 import coil3.ImageLoader
 import coil3.SingletonImageLoader
+import coil3.disk.DiskCache
 import com.PolGrauDev.reproductor_nativo_android.data.AlbumArtFetcher
 import com.PolGrauDev.reproductor_nativo_android.data.AlbumArtKeyer
 import com.PolGrauDev.reproductor_nativo_android.data.MediaRepository
 import com.PolGrauDev.reproductor_nativo_android.data.PlaylistRepository
 import com.PolGrauDev.reproductor_nativo_android.data.SettingsRepository
 import com.PolGrauDev.reproductor_nativo_android.data.db.AppDatabase
+import okio.Path.Companion.toOkioPath
 
 class App : Application(), SingletonImageLoader.Factory {
 
@@ -36,6 +38,12 @@ class App : Application(), SingletonImageLoader.Factory {
             .components {
                 add(AlbumArtFetcher.Factory())
                 add(AlbumArtKeyer())
+            }
+            .diskCache {
+                DiskCache.Builder()
+                    .directory(context.cacheDir.resolve("album_art_cache").toOkioPath())
+                    .maxSizeBytes(50L * 1024 * 1024)
+                    .build()
             }
             .build()
 }

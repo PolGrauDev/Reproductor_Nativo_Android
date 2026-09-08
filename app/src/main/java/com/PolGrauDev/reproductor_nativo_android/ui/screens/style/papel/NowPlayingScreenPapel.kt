@@ -54,6 +54,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.Player
 import coil3.compose.AsyncImage
 import com.PolGrauDev.reproductor_nativo_android.data.AlbumArtRequest
@@ -67,6 +68,7 @@ import com.PolGrauDev.reproductor_nativo_android.viewmodel.MusicViewModel
 @Composable
 fun NowPlayingScreenPapel(viewModel: MusicViewModel, uiState: MusicUiState, onBack: () -> Unit, onQueueClick: () -> Unit, onSearchClick: () -> Unit) {
     val song = uiState.currentSong
+    val progress by viewModel.playbackProgress.collectAsStateWithLifecycle()
     var isUserSeeking by remember { mutableStateOf(false) }
     var seekFraction by remember { mutableFloatStateOf(0f) }
 
@@ -132,8 +134,8 @@ fun NowPlayingScreenPapel(viewModel: MusicViewModel, uiState: MusicUiState, onBa
                 )
                 Spacer(Modifier.height(26.dp))
 
-                val durationMs = uiState.playback.durationMs.coerceAtLeast(1L)
-                val playedFraction = if (isUserSeeking) seekFraction else (uiState.playback.positionMs.toFloat() / durationMs).coerceIn(0f, 1f)
+                val durationMs = progress.durationMs.coerceAtLeast(1L)
+                val playedFraction = if (isUserSeeking) seekFraction else (progress.positionMs.toFloat() / durationMs).coerceIn(0f, 1f)
                 Slider(
                     value = playedFraction,
                     onValueChange = { isUserSeeking = true; seekFraction = it },
@@ -144,8 +146,8 @@ fun NowPlayingScreenPapel(viewModel: MusicViewModel, uiState: MusicUiState, onBa
                     colors = SliderDefaults.colors(thumbColor = PapelColors.Primary, activeTrackColor = PapelColors.Primary, inactiveTrackColor = PapelColors.Outline),
                 )
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text(formatMillis(uiState.playback.positionMs), style = PapelType.Mono, color = PapelColors.OnSurfaceVariant)
-                    Text(formatMillis(uiState.playback.durationMs), style = PapelType.Mono, color = PapelColors.OnSurfaceVariant)
+                    Text(formatMillis(progress.positionMs), style = PapelType.Mono, color = PapelColors.OnSurfaceVariant)
+                    Text(formatMillis(progress.durationMs), style = PapelType.Mono, color = PapelColors.OnSurfaceVariant)
                 }
 
                 Spacer(Modifier.height(30.dp))

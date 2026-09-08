@@ -50,6 +50,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.unit.sp
 import androidx.media3.common.Player
 import coil3.compose.AsyncImage
@@ -64,6 +65,7 @@ import com.PolGrauDev.reproductor_nativo_android.viewmodel.MusicViewModel
 @Composable
 fun NowPlayingScreenSticker(viewModel: MusicViewModel, uiState: MusicUiState, onBack: () -> Unit, onQueueClick: () -> Unit, onSearchClick: () -> Unit) {
     val song = uiState.currentSong
+    val progress by viewModel.playbackProgress.collectAsStateWithLifecycle()
     var isUserSeeking by remember { mutableStateOf(false) }
     var seekFraction by remember { mutableFloatStateOf(0f) }
 
@@ -126,8 +128,8 @@ fun NowPlayingScreenSticker(viewModel: MusicViewModel, uiState: MusicUiState, on
             Text(song?.artist ?: "-", style = StickerType.Handwritten, color = StickerColors.Faded, maxLines = 1)
             Spacer(Modifier.height(18.dp))
 
-            val durationMs = uiState.playback.durationMs.coerceAtLeast(1L)
-            val playedFraction = if (isUserSeeking) seekFraction else (uiState.playback.positionMs.toFloat() / durationMs).coerceIn(0f, 1f)
+            val durationMs = progress.durationMs.coerceAtLeast(1L)
+            val playedFraction = if (isUserSeeking) seekFraction else (progress.positionMs.toFloat() / durationMs).coerceIn(0f, 1f)
             Slider(
                 value = playedFraction,
                 onValueChange = { isUserSeeking = true; seekFraction = it },
@@ -138,8 +140,8 @@ fun NowPlayingScreenSticker(viewModel: MusicViewModel, uiState: MusicUiState, on
                 colors = SliderDefaults.colors(thumbColor = StickerColors.Butter, activeTrackColor = StickerColors.Pink, inactiveTrackColor = androidx.compose.ui.graphics.Color.White),
             )
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(formatMillis(uiState.playback.positionMs), style = StickerType.HandwrittenSmall, color = StickerColors.Faded)
-                Text(formatMillis(uiState.playback.durationMs), style = StickerType.HandwrittenSmall, color = StickerColors.Faded)
+                Text(formatMillis(progress.positionMs), style = StickerType.HandwrittenSmall, color = StickerColors.Faded)
+                Text(formatMillis(progress.durationMs), style = StickerType.HandwrittenSmall, color = StickerColors.Faded)
             }
 
             Spacer(Modifier.height(18.dp))

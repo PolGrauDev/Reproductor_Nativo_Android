@@ -50,6 +50,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.unit.sp
 import androidx.media3.common.Player
 import coil3.compose.AsyncImage
@@ -64,6 +65,7 @@ import com.PolGrauDev.reproductor_nativo_android.viewmodel.MusicViewModel
 @Composable
 fun NowPlayingScreenFanzine(viewModel: MusicViewModel, uiState: MusicUiState, onBack: () -> Unit, onQueueClick: () -> Unit, onSearchClick: () -> Unit) {
     val song = uiState.currentSong
+    val progress by viewModel.playbackProgress.collectAsStateWithLifecycle()
     var isUserSeeking by remember { mutableStateOf(false) }
     var seekFraction by remember { mutableFloatStateOf(0f) }
 
@@ -139,8 +141,8 @@ fun NowPlayingScreenFanzine(viewModel: MusicViewModel, uiState: MusicUiState, on
             Text((song?.artist ?: "-").uppercase(), fontFamily = FanzineFonts.SpecialElite, fontSize = 13.sp, color = FanzineColors.Faded, maxLines = 1, modifier = Modifier.padding(top = 6.dp))
             Spacer(Modifier.height(18.dp))
 
-            val durationMs = uiState.playback.durationMs.coerceAtLeast(1L)
-            val playedFraction = if (isUserSeeking) seekFraction else (uiState.playback.positionMs.toFloat() / durationMs).coerceIn(0f, 1f)
+            val durationMs = progress.durationMs.coerceAtLeast(1L)
+            val playedFraction = if (isUserSeeking) seekFraction else (progress.positionMs.toFloat() / durationMs).coerceIn(0f, 1f)
             Slider(
                 value = playedFraction,
                 onValueChange = { isUserSeeking = true; seekFraction = it },
@@ -151,8 +153,8 @@ fun NowPlayingScreenFanzine(viewModel: MusicViewModel, uiState: MusicUiState, on
                 colors = SliderDefaults.colors(thumbColor = FanzineColors.Paper, activeTrackColor = FanzineColors.Red, inactiveTrackColor = FanzineColors.Grime),
             )
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(formatMillis(uiState.playback.positionMs), fontFamily = FanzineFonts.SpecialElite, fontSize = 11.sp, color = FanzineColors.Faded)
-                Text(formatMillis(uiState.playback.durationMs), fontFamily = FanzineFonts.SpecialElite, fontSize = 11.sp, color = FanzineColors.Faded)
+                Text(formatMillis(progress.positionMs), fontFamily = FanzineFonts.SpecialElite, fontSize = 11.sp, color = FanzineColors.Faded)
+                Text(formatMillis(progress.durationMs), fontFamily = FanzineFonts.SpecialElite, fontSize = 11.sp, color = FanzineColors.Faded)
             }
 
             Spacer(Modifier.height(20.dp))
