@@ -209,9 +209,9 @@ class MusicViewModel(
 
     fun moveQueueItem(from: Int, to: Int) = playbackConnection.moveQueueItem(from, to)
 
-    fun removeFromQueue(index: Int) = playbackConnection.removeQueueItem(index)
+    fun removeFromQueue(mediaId: String) = playbackConnection.removeQueueItem(mediaId)
 
-    fun playQueueItem(index: Int) = playbackConnection.playQueueItem(index)
+    fun playQueueItem(mediaId: String) = playbackConnection.playQueueItem(mediaId)
 
     fun clearPlaybackError() = playbackConnection.clearError()
 

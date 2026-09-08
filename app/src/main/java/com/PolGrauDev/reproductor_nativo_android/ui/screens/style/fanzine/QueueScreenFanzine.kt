@@ -51,7 +51,7 @@ fun QueueScreenFanzine(viewModel: MusicViewModel, onBack: () -> Unit) {
     val queue = uiState.queue
     val isSearching = uiState.queueSearchQuery.isNotBlank()
     val displayQueue = if (isSearching) uiState.filteredQueue else queue
-    val currentIndex = uiState.playback.currentIndex
+    val canReorder = !isSearching && !uiState.playback.shuffleModeEnabled
 
     Column(Modifier.fillMaxSize().background(FanzineColors.Slate).photocopyGrain()) {
         Row(Modifier.fillMaxWidth().padding(14.dp, 12.dp, 14.dp, 8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -74,13 +74,13 @@ fun QueueScreenFanzine(viewModel: MusicViewModel, onBack: () -> Unit) {
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(14.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
             itemsIndexed(displayQueue, key = { index, song -> "$index-${song.id}" }) { index, song ->
                 val realIndex = if (isSearching) queue.indexOf(song).coerceAtLeast(0) else index
-                val isCurrent = realIndex == currentIndex
+                val isCurrent = song.id.toString() == uiState.playback.currentMediaId
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .rotate(fanzineTilt(index))
                         .then(if (isCurrent) Modifier.background(FanzineColors.Red) else Modifier.border(2.dp, FanzineColors.Hair))
-                        .clickable { viewModel.playQueueItem(realIndex) }
+                        .clickable { viewModel.playQueueItem(song.id.toString()) }
                         .padding(11.dp, 9.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
@@ -98,7 +98,7 @@ fun QueueScreenFanzine(viewModel: MusicViewModel, onBack: () -> Unit) {
                         Icon(Icons.Filled.MusicNote, contentDescription = null, tint = FanzineColors.Ink, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(6.dp))
                     }
-                    if (!isSearching) {
+                    if (canReorder) {
                         val tint = if (isCurrent) FanzineColors.Ink else FanzineColors.Paper
                         Icon(
                             Icons.Filled.KeyboardArrowUp,
@@ -117,7 +117,7 @@ fun QueueScreenFanzine(viewModel: MusicViewModel, onBack: () -> Unit) {
                         Icons.Filled.Close,
                         contentDescription = "Quitar de la cola",
                         tint = if (isCurrent) FanzineColors.Ink else FanzineColors.Red,
-                        modifier = Modifier.clickable { viewModel.removeFromQueue(realIndex) }.padding(4.dp),
+                        modifier = Modifier.clickable { viewModel.removeFromQueue(song.id.toString()) }.padding(4.dp),
                     )
                 }
             }

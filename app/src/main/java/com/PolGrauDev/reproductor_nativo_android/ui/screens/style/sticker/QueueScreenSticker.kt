@@ -51,7 +51,7 @@ fun QueueScreenSticker(viewModel: MusicViewModel, onBack: () -> Unit) {
     val queue = uiState.queue
     val isSearching = uiState.queueSearchQuery.isNotBlank()
     val displayQueue = if (isSearching) uiState.filteredQueue else queue
-    val currentIndex = uiState.playback.currentIndex
+    val canReorder = !isSearching && !uiState.playback.shuffleModeEnabled
 
     Column(Modifier.fillMaxSize().background(StickerColors.Paper)) {
         Row(Modifier.fillMaxWidth().padding(16.dp, 14.dp, 16.dp, 0.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -73,7 +73,7 @@ fun QueueScreenSticker(viewModel: MusicViewModel, onBack: () -> Unit) {
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             itemsIndexed(displayQueue, key = { index, song -> "$index-${song.id}" }) { index, song ->
                 val realIndex = if (isSearching) queue.indexOf(song).coerceAtLeast(0) else index
-                val isCurrent = realIndex == currentIndex
+                val isCurrent = song.id.toString() == uiState.playback.currentMediaId
                 StickerHardShadowBox(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(18.dp),
@@ -81,7 +81,7 @@ fun QueueScreenSticker(viewModel: MusicViewModel, onBack: () -> Unit) {
                     rotationDegrees = stickerTilt(index),
                 ) {
                     Row(
-                        modifier = Modifier.fillMaxWidth().clickable { viewModel.playQueueItem(realIndex) }.padding(9.dp, 9.dp, 6.dp, 9.dp),
+                        modifier = Modifier.fillMaxWidth().clickable { viewModel.playQueueItem(song.id.toString()) }.padding(9.dp, 9.dp, 6.dp, 9.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         AsyncImage(model = AlbumArtRequest(song.contentUri), contentDescription = null, modifier = Modifier.size(40.dp).clip(RoundedCornerShape(13.dp)), contentScale = ContentScale.Crop)
@@ -98,7 +98,7 @@ fun QueueScreenSticker(viewModel: MusicViewModel, onBack: () -> Unit) {
                                 Text(song.artist, style = StickerType.HandwrittenSmall, color = StickerColors.Faded, maxLines = 1)
                             }
                         }
-                        if (!isSearching) {
+                        if (canReorder) {
                             val iconTint = if (isCurrent) Color.White else StickerColors.Ink
                             Icon(
                                 Icons.Filled.KeyboardArrowUp,
@@ -117,7 +117,7 @@ fun QueueScreenSticker(viewModel: MusicViewModel, onBack: () -> Unit) {
                             Icons.Filled.Close,
                             contentDescription = "Quitar de la cola",
                             tint = if (isCurrent) Color.White else StickerColors.Pink,
-                            modifier = Modifier.clickable { viewModel.removeFromQueue(realIndex) }.padding(4.dp),
+                            modifier = Modifier.clickable { viewModel.removeFromQueue(song.id.toString()) }.padding(4.dp),
                         )
                     }
                 }

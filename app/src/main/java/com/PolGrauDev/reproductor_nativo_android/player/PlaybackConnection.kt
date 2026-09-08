@@ -4,6 +4,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.os.SystemClock
 import androidx.core.content.ContextCompat
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.PlaybackException
@@ -36,7 +37,6 @@ data class PlaybackUiState(
     val shuffleModeEnabled: Boolean = false,
     val repeatMode: Int = Player.REPEAT_MODE_OFF,
     val queueMediaIds: List<String> = emptyList(),
-    val currentIndex: Int = -1,
     val errorMessage: String? = null,
     val sleepTimerActive: Boolean = false,
     val sleepTimerRemainingMs: Long = 0L,
@@ -90,6 +90,7 @@ class PlaybackConnection(private val context: Context) {
 
         override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) {
             _state.update { it.copy(shuffleModeEnabled = shuffleModeEnabled) }
+            refreshQueue()
         }
 
         override fun onRepeatModeChanged(repeatMode: Int) {
@@ -181,12 +182,20 @@ class PlaybackConnection(private val context: Context) {
         controller?.moveMediaItem(from, to)
     }
 
-    fun removeQueueItem(index: Int) {
-        controller?.removeMediaItem(index)
+    /**
+     * Identifica la pista por [mediaId] en vez de por posición: la posición de una pista dentro
+     * de la cola mostrada en pantalla ya no coincide con su índice real en el [Player] cuando
+     * shuffle está activo ([refreshQueue] publica [PlaybackUiState.queueMediaIds] en orden de
+     * reproducción real, no de inserción).
+     */
+    fun removeQueueItem(mediaId: String) {
+        val c = controller ?: return
+        c.indexOfMediaId(mediaId)?.let { c.removeMediaItem(it) }
     }
 
-    fun playQueueItem(index: Int) {
-        controller?.seekTo(index, 0L)
+    fun playQueueItem(mediaId: String) {
+        val c = controller ?: return
+        c.indexOfMediaId(mediaId)?.let { c.seekTo(it, 0L) }
     }
 
     fun clearError() {
@@ -261,10 +270,17 @@ class PlaybackConnection(private val context: Context) {
 
     private fun safeDuration(): Long = controller?.duration?.coerceAtLeast(0) ?: 0L
 
+    private fun MediaController.indexOfMediaId(mediaId: String): Int? {
+        for (i in 0 until mediaItemCount) {
+            if (getMediaItemAt(i).mediaId == mediaId) return i
+        }
+        return null
+    }
+
     private fun refreshQueue() {
         val c = controller ?: return
-        val ids = (0 until c.mediaItemCount).map { c.getMediaItemAt(it).mediaId }
-        _state.update { it.copy(queueMediaIds = ids, currentIndex = c.currentMediaItemIndex) }
+        val ids = c.currentTimeline.playbackOrderIndices(c.shuffleModeEnabled).map { c.getMediaItemAt(it).mediaId }
+        _state.update { it.copy(queueMediaIds = ids) }
     }
 
     /** Player no emite la posición de forma continua; se sondea mientras suena. */
@@ -336,6 +352,23 @@ class PlaybackConnection(private val context: Context) {
             controller?.replaceMediaItem(index, item.buildUpon().setMediaMetadata(updatedMetadata).build())
         }
     }
+}
+
+/**
+ * Recorre el [Timeline] en el orden real de reproducción (shuffled cuando [shuffleModeEnabled]
+ * está activo), leyendo el mismo mecanismo que Media3 usa internamente para next/previous
+ * ([Timeline.getFirstWindowIndex]/[Timeline.getNextWindowIndex]) en vez de asumir orden de
+ * inserción. Se usa siempre [Player.REPEAT_MODE_OFF] en el recorrido para visitar cada ventana
+ * una sola vez, sin depender del repeat mode real del usuario.
+ */
+internal fun Timeline.playbackOrderIndices(shuffleModeEnabled: Boolean): List<Int> {
+    val indices = mutableListOf<Int>()
+    var index = getFirstWindowIndex(shuffleModeEnabled)
+    while (index != C.INDEX_UNSET) {
+        indices += index
+        index = getNextWindowIndex(index, Player.REPEAT_MODE_OFF, shuffleModeEnabled)
+    }
+    return indices
 }
 
 internal fun PlaybackException.toUserMessage(songTitle: String?): String {

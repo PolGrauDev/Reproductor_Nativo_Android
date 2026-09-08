@@ -48,7 +48,7 @@ fun QueueScreenPapel(viewModel: MusicViewModel, onBack: () -> Unit) {
     val queue = uiState.queue
     val isSearching = uiState.queueSearchQuery.isNotBlank()
     val displayQueue = if (isSearching) uiState.filteredQueue else queue
-    val currentIndex = uiState.playback.currentIndex
+    val canReorder = !isSearching && !uiState.playback.shuffleModeEnabled
 
     Scaffold(containerColor = PapelColors.Background) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
@@ -72,14 +72,14 @@ fun QueueScreenPapel(viewModel: MusicViewModel, onBack: () -> Unit) {
                     val realIndex = if (isSearching) queue.indexOf(song).coerceAtLeast(0) else index
                     PapelQueueRow(
                         song = song,
-                        isCurrent = realIndex == currentIndex,
-                        isSearching = isSearching,
+                        isCurrent = song.id.toString() == uiState.playback.currentMediaId,
+                        canReorder = canReorder,
                         canMoveUp = index > 0,
                         canMoveDown = index < displayQueue.lastIndex,
-                        onClick = { viewModel.playQueueItem(realIndex) },
+                        onClick = { viewModel.playQueueItem(song.id.toString()) },
                         onMoveUp = { viewModel.moveQueueItem(realIndex, realIndex - 1) },
                         onMoveDown = { viewModel.moveQueueItem(realIndex, realIndex + 1) },
-                        onRemove = { viewModel.removeFromQueue(realIndex) },
+                        onRemove = { viewModel.removeFromQueue(song.id.toString()) },
                     )
                 }
             }
@@ -126,7 +126,7 @@ private fun PapelQueueSearchField(query: String, onQueryChange: (String) -> Unit
 private fun PapelQueueRow(
     song: Song,
     isCurrent: Boolean,
-    isSearching: Boolean,
+    canReorder: Boolean,
     canMoveUp: Boolean,
     canMoveDown: Boolean,
     onClick: () -> Unit,
@@ -158,7 +158,7 @@ private fun PapelQueueRow(
                     Text(song.artist, style = PapelType.BodySmall, color = PapelColors.OnSurfaceVariant, maxLines = 1)
                 }
             }
-            if (!isSearching) {
+            if (canReorder) {
                 Icon(
                     Icons.Filled.KeyboardArrowUp,
                     contentDescription = "Subir",

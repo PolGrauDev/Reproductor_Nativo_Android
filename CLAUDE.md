@@ -175,9 +175,22 @@ SettingsRepository (DataStore: fade
   `removeQueueItem`, `playQueueItem`) are thin wrappers over `Player`'s own
   `shuffleModeEnabled`/`repeatMode`/`moveMediaItem`/`removeMediaItem` — ExoPlayer already
   implements queue manipulation natively, this layer only exposes it as `StateFlow` state.
-  Known v1 simplification: the queue list (`queueMediaIds`) reflects playlist/index order, not
-  the shuffled play order — Media3 applies shuffle to next/previous navigation, not to what
-  `getMediaItemAt(index)` returns. The sleep timer (`startSleepTimer`/`cancelSleepTimer`) follows
+  `PlaybackUiState.queueMediaIds` reflects the *real* playback order, including the shuffled
+  order when `shuffleModeEnabled` is on, not raw playlist/insertion order: `refreshQueue()` walks
+  `Player.currentTimeline` via the `internal fun Timeline.playbackOrderIndices(shuffleModeEnabled)`
+  extension (bottom of this file), which starts at `Timeline.getFirstWindowIndex(shuffleModeEnabled)`
+  and repeatedly calls `Timeline.getNextWindowIndex(index, Player.REPEAT_MODE_OFF, shuffleModeEnabled)`
+  until `C.INDEX_UNSET` — the same mechanism Media3 itself uses internally for next/previous
+  navigation, always walked with `REPEAT_MODE_OFF` regardless of the user's real repeat mode so
+  each window is visited exactly once. `onShuffleModeEnabledChanged` calls `refreshQueue()` too,
+  so the published order updates the moment shuffle is toggled, not just on the next track
+  transition. Because a track's position in that list no longer matches its raw index in the
+  underlying `Player` playlist once shuffle is on, `playQueueItem`/`removeQueueItem` identify the
+  track by `mediaId` (`Song.id.toString()`, resolved to the current raw index internally via a
+  `MediaController.indexOfMediaId` helper) instead of by position — unlike `moveQueueItem`, which
+  stays position-based because `QueueScreen*` only exposes manual reordering while shuffle is
+  off, where displayed position and raw index coincide (see `ui/screens/style/*/QueueScreen*.kt`
+  below). The sleep timer (`startSleepTimer`/`cancelSleepTimer`) follows
   the same job/`delay`/cancel idiom as the position-polling loop, using
   `SystemClock.elapsedRealtime()` (monotonic) rather than wall-clock time, and calls
   `controller.pause()` when it reaches zero. **"Fundido entre canciones" is deliberately not
@@ -220,14 +233,18 @@ SettingsRepository (DataStore: fade
   the derived `MusicUiState.filteredQueue` (filters `queue` by title/artist, case-insensitive; returns `queue`
   unfiltered when blank) — is scoped to *only* the current playback queue, independent of the
   library-wide `searchQuery`/`filteredSongs`. `QueueScreen*`'s search field writes to it via
-  `viewModel::setQueueSearchQuery`. Because `filteredQueue` is a different list (and order) than
-  `queue`, each `QueueScreen*` style implementation maps a filtered-list row back to its real
-  queue index via `queue.indexOf(song)` before calling `playQueueItem`/`moveQueueItem` — see
-  `QueueScreenPapel`'s `realIndex` — and hides only the reorder up/down affordances while a
-  search is active (`isSearching`), since reordering a filtered subview against the real queue's
-  indices would be confusing and isn't needed for a search-to-play use case. The "Quitar de la
-  cola" remove icon stays visible and functional during search — it already operates on the
-  resolved `realIndex`, not the filtered display index, so hiding it was never necessary.
+  `viewModel::setQueueSearchQuery`. `playQueueItem`/`removeFromQueue` identify the tapped row by
+  `song.id.toString()` (the `Song`/`MediaItem` id), not by position, so they're correct
+  regardless of whether the visible list is `queue` or the filtered `filteredQueue` — no index
+  translation needed for those two actions, and the "Quitar de la cola" remove icon stays visible
+  and functional during search for the same reason. `moveQueueItem`, by contrast, is genuinely
+  position-based (`Player.moveMediaItem(from, to)`), so each `QueueScreen*` style implementation
+  still maps a filtered-list row back to its real queue index via `queue.indexOf(song)` before
+  calling it — see `QueueScreenPapel`'s `realIndex` — and the reorder up/down affordances are
+  hidden (`canReorder = !isSearching && !shuffleModeEnabled`) both while a search is active
+  (reordering a filtered subview against the real queue's indices would be confusing) and while
+  shuffle is on (the displayed order is then the shuffled play order, not raw queue position —
+  see `player/PlaybackConnection` above — so there's no raw index for a manual move to target).
 - **`data/db/` (Room) + `data/PlaylistRepository`** — the persistence layer for relational data
   (favorites/playlists). `data/SettingsRepository` (DataStore Preferences, see below) persists
   simple scalar app settings. Together these are the only persistence layers in the app;
