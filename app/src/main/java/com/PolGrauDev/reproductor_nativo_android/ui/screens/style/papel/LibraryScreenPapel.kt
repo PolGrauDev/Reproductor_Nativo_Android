@@ -151,7 +151,7 @@ private fun PapelLibraryHeader(sortOrder: SortOrder, onSortSelect: (SortOrder) -
         }
         var sortMenuOpen by remember { mutableStateOf(false) }
         Box {
-            IconButton(onClick = { sortMenuOpen = true }) {
+            IconButton(onClick = { sortMenuOpen = !sortMenuOpen }) {
                 Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = "Ordenar", tint = PapelColors.OnSurfaceVariant)
             }
             DropdownMenu(expanded = sortMenuOpen, onDismissRequest = { sortMenuOpen = false }) {

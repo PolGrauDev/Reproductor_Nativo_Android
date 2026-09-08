@@ -154,7 +154,7 @@ private fun StickerLibraryHeader(onSettingsClick: () -> Unit, viewModel: MusicVi
         }
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             StickerHardShadowBox(modifier = Modifier.size(38.dp), shape = RoundedCornerShape(14.dp)) {
-                Box(Modifier.fillMaxSize().clickable { sortMenuOpen = true }, contentAlignment = Alignment.Center) {
+                Box(Modifier.fillMaxSize().clickable { sortMenuOpen = !sortMenuOpen }, contentAlignment = Alignment.Center) {
                     Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = "Ordenar", tint = StickerColors.Ink, modifier = Modifier.size(19.dp))
                 }
             }

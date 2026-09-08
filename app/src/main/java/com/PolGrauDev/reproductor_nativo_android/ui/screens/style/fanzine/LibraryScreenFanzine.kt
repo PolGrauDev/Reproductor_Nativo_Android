@@ -162,7 +162,7 @@ private fun FanzineLibraryHeader(sortOrder: SortOrder, onSortSelect: (SortOrder)
                         .size(30.dp)
                         .rotate(-2f)
                         .background(FanzineColors.Paper)
-                        .clickable { sortMenuOpen = true }
+                        .clickable { sortMenuOpen = !sortMenuOpen }
                         .padding(4.dp),
                 )
                 Spacer(Modifier.width(8.dp))
