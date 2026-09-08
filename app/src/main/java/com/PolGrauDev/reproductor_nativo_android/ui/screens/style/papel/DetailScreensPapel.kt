@@ -1,6 +1,8 @@
 package com.PolGrauDev.reproductor_nativo_android.ui.screens.style.papel
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -16,6 +18,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
@@ -27,13 +30,10 @@ import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.MusicNote
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -42,9 +42,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.AppStyle
@@ -53,6 +55,7 @@ import com.PolGrauDev.reproductor_nativo_android.data.model.Song
 import com.PolGrauDev.reproductor_nativo_android.ui.components.AddToPlaylistDialog
 import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.papel.PapelColors
 import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.papel.PapelRowDivider
+import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.papel.PapelSectionLabel
 import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.papel.PapelType
 import com.PolGrauDev.reproductor_nativo_android.viewmodel.MusicViewModel
 
@@ -381,27 +384,90 @@ fun PlaylistDetailScreenPapel(
     }
 
     if (showRenameDialog && playlist != null) {
-        var name by remember { mutableStateOf(playlist.name) }
-        AlertDialog(
-            onDismissRequest = { showRenameDialog = false },
-            title = { Text("Renombrar playlist") },
-            text = { OutlinedTextField(value = name, onValueChange = { name = it }, singleLine = true, modifier = Modifier.fillMaxWidth()) },
-            confirmButton = {
-                TextButton(onClick = { viewModel.renamePlaylist(playlistId, name); showRenameDialog = false }, enabled = name.isNotBlank()) { Text("Guardar") }
-            },
-            dismissButton = { TextButton(onClick = { showRenameDialog = false }) { Text("Cancelar") } },
+        PapelRenamePlaylistDialog(
+            currentName = playlist.name,
+            onDismiss = { showRenameDialog = false },
+            onRename = { viewModel.renamePlaylist(playlistId, it); showRenameDialog = false },
         )
     }
 
     if (showDeleteDialog) {
-        AlertDialog(
-            onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Borrar playlist") },
-            text = { Text("¿Seguro que quieres borrar \"${playlist?.name}\"? Esta acción no se puede deshacer.") },
-            confirmButton = {
-                TextButton(onClick = { viewModel.deletePlaylist(playlistId); showDeleteDialog = false; onPlaylistDeleted() }) { Text("Borrar") }
-            },
-            dismissButton = { TextButton(onClick = { showDeleteDialog = false }) { Text("Cancelar") } },
+        PapelDeletePlaylistDialog(
+            playlistName = playlist?.name ?: "",
+            onDismiss = { showDeleteDialog = false },
+            onDelete = { viewModel.deletePlaylist(playlistId); showDeleteDialog = false; onPlaylistDeleted() },
         )
+    }
+}
+
+@Composable
+private fun PapelRenamePlaylistDialog(currentName: String, onDismiss: () -> Unit, onRename: (String) -> Unit) {
+    var name by remember { mutableStateOf(currentName) }
+    Dialog(onDismissRequest = onDismiss) {
+        Column(Modifier.background(PapelColors.Surface).padding(22.dp)) {
+            PapelSectionLabel("Renombrar")
+            Text("Renombrar playlist", style = PapelType.TitleLarge, color = PapelColors.OnSurface)
+            Spacer(Modifier.height(14.dp))
+            BasicTextField(
+                value = name,
+                onValueChange = { name = it },
+                singleLine = true,
+                textStyle = PapelType.BodyMedium.copy(color = PapelColors.OnSurface),
+                cursorBrush = SolidColor(PapelColors.Primary),
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Spacer(Modifier.height(8.dp))
+            PapelRowDivider()
+            Spacer(Modifier.height(22.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                Text(
+                    "CANCELAR",
+                    style = PapelType.SectionLabel,
+                    color = PapelColors.OnSurfaceVariant,
+                    modifier = Modifier.clickable(onClick = onDismiss).padding(8.dp),
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    "GUARDAR",
+                    style = PapelType.SectionLabel,
+                    color = if (name.isNotBlank()) PapelColors.OnSurface else PapelColors.Faint,
+                    modifier = Modifier
+                        .clickable(enabled = name.isNotBlank()) { onRename(name) }
+                        .padding(8.dp),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun PapelDeletePlaylistDialog(playlistName: String, onDismiss: () -> Unit, onDelete: () -> Unit) {
+    Dialog(onDismissRequest = onDismiss) {
+        Column(Modifier.background(PapelColors.Surface).padding(22.dp)) {
+            PapelSectionLabel("Confirmar")
+            Text("Borrar playlist", style = PapelType.TitleLarge, color = PapelColors.OnSurface)
+            Spacer(Modifier.height(14.dp))
+            Text(
+                "¿Seguro que quieres borrar \"$playlistName\"? Esta acción no se puede deshacer.",
+                style = PapelType.BodyMedium,
+                color = PapelColors.OnSurfaceVariant,
+            )
+            Spacer(Modifier.height(22.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                Text(
+                    "CANCELAR",
+                    style = PapelType.SectionLabel,
+                    color = PapelColors.OnSurfaceVariant,
+                    modifier = Modifier.clickable(onClick = onDismiss).padding(8.dp),
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    "BORRAR",
+                    style = PapelType.SectionLabel,
+                    color = PapelColors.OnSurface,
+                    modifier = Modifier.clickable(onClick = onDelete).padding(8.dp),
+                )
+            }
+        }
     }
 }

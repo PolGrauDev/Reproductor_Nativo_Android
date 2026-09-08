@@ -2,12 +2,14 @@ package com.PolGrauDev.reproductor_nativo_android.ui.screens.style.papel
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -22,16 +24,13 @@ import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.automirrored.filled.Sort
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -40,9 +39,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import coil3.compose.AsyncImage
 import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.AppStyle
 import com.PolGrauDev.reproductor_nativo_android.data.AlbumArtRequest
@@ -408,17 +409,49 @@ private fun PapelPlaylistsTab(
     }
 
     if (showCreateDialog) {
-        var name by remember { mutableStateOf("") }
-        AlertDialog(
-            onDismissRequest = { showCreateDialog = false },
-            title = { Text("Nueva playlist") },
-            text = {
-                OutlinedTextField(value = name, onValueChange = { name = it }, singleLine = true, modifier = Modifier.fillMaxWidth())
-            },
-            confirmButton = {
-                TextButton(onClick = { onCreatePlaylist(name); showCreateDialog = false }, enabled = name.isNotBlank()) { Text("Crear") }
-            },
-            dismissButton = { TextButton(onClick = { showCreateDialog = false }) { Text("Cancelar") } },
+        PapelCreatePlaylistDialog(
+            onDismiss = { showCreateDialog = false },
+            onCreate = { onCreatePlaylist(it); showCreateDialog = false },
         )
+    }
+}
+
+@Composable
+private fun PapelCreatePlaylistDialog(onDismiss: () -> Unit, onCreate: (String) -> Unit) {
+    var name by remember { mutableStateOf("") }
+    Dialog(onDismissRequest = onDismiss) {
+        Column(Modifier.background(PapelColors.Surface).padding(22.dp)) {
+            PapelSectionLabel("Nueva")
+            Text("Nueva playlist", style = PapelType.TitleLarge, color = PapelColors.OnSurface)
+            Spacer(Modifier.height(14.dp))
+            BasicTextField(
+                value = name,
+                onValueChange = { name = it },
+                singleLine = true,
+                textStyle = PapelType.BodyMedium.copy(color = PapelColors.OnSurface),
+                cursorBrush = SolidColor(PapelColors.Primary),
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Spacer(Modifier.height(8.dp))
+            PapelRowDivider()
+            Spacer(Modifier.height(22.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                Text(
+                    "CANCELAR",
+                    style = PapelType.SectionLabel,
+                    color = PapelColors.OnSurfaceVariant,
+                    modifier = Modifier.clickable(onClick = onDismiss).padding(8.dp),
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    "CREAR",
+                    style = PapelType.SectionLabel,
+                    color = if (name.isNotBlank()) PapelColors.OnSurface else PapelColors.Faint,
+                    modifier = Modifier
+                        .clickable(enabled = name.isNotBlank()) { onCreate(name) }
+                        .padding(8.dp),
+                )
+            }
+        }
     }
 }

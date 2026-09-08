@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
@@ -29,11 +30,8 @@ import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.MusicNote
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -43,10 +41,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.AppStyle
@@ -313,27 +313,116 @@ fun PlaylistDetailScreenSticker(
     }
 
     if (showRenameDialog && playlist != null) {
-        var name by remember { mutableStateOf(playlist.name) }
-        AlertDialog(
-            onDismissRequest = { showRenameDialog = false },
-            title = { Text("Renombrar playlist") },
-            text = { OutlinedTextField(value = name, onValueChange = { name = it }, singleLine = true, modifier = Modifier.fillMaxWidth()) },
-            confirmButton = {
-                TextButton(onClick = { viewModel.renamePlaylist(playlistId, name); showRenameDialog = false }, enabled = name.isNotBlank()) { Text("Guardar") }
-            },
-            dismissButton = { TextButton(onClick = { showRenameDialog = false }) { Text("Cancelar") } },
+        StickerRenamePlaylistDialog(
+            currentName = playlist.name,
+            onDismiss = { showRenameDialog = false },
+            onRename = { viewModel.renamePlaylist(playlistId, it); showRenameDialog = false },
         )
     }
 
     if (showDeleteDialog) {
-        AlertDialog(
-            onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Borrar playlist") },
-            text = { Text("¿Seguro que quieres borrar \"${playlist?.name}\"? Esta acción no se puede deshacer.") },
-            confirmButton = {
-                TextButton(onClick = { viewModel.deletePlaylist(playlistId); showDeleteDialog = false; onPlaylistDeleted() }) { Text("Borrar") }
-            },
-            dismissButton = { TextButton(onClick = { showDeleteDialog = false }) { Text("Cancelar") } },
+        StickerDeletePlaylistDialog(
+            playlistName = playlist?.name ?: "",
+            onDismiss = { showDeleteDialog = false },
+            onDelete = { viewModel.deletePlaylist(playlistId); showDeleteDialog = false; onPlaylistDeleted() },
         )
+    }
+}
+
+@Composable
+private fun StickerRenamePlaylistDialog(currentName: String, onDismiss: () -> Unit, onRename: (String) -> Unit) {
+    var name by remember { mutableStateOf(currentName) }
+    Dialog(onDismissRequest = onDismiss) {
+        StickerHardShadowBox(shape = RoundedCornerShape(26.dp), borderWidth = 4.dp, shadowOffsetX = 7.dp, shadowOffsetY = 7.dp) {
+            Column(Modifier.fillMaxWidth()) {
+                Row(
+                    Modifier.fillMaxWidth().background(StickerColors.Grape, RoundedCornerShape(22.dp, 22.dp, 0.dp, 0.dp)).padding(16.dp, 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(Icons.Filled.Edit, contentDescription = null, tint = StickerColors.Ink)
+                    Spacer(Modifier.width(9.dp))
+                    Text("Renombrar playlist", style = StickerType.TitleMedium.let { it.copy(fontSize = 20.sp) }, color = StickerColors.Ink)
+                }
+                Column(Modifier.padding(16.dp)) {
+                    Box(Modifier.background(Color.White, RoundedCornerShape(16.dp)).fillMaxWidth().padding(12.dp, 10.dp)) {
+                        BasicTextField(
+                            value = name,
+                            onValueChange = { name = it },
+                            singleLine = true,
+                            textStyle = StickerType.HandwrittenSmall.copy(color = StickerColors.Ink),
+                            cursorBrush = SolidColor(StickerColors.Ink),
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+                    Spacer(Modifier.height(16.dp))
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                        StickerHardShadowBox(shape = RoundedCornerShape(15.dp)) {
+                            Text(
+                                "cancelar",
+                                style = StickerType.HandwrittenSmall,
+                                color = StickerColors.Faded,
+                                modifier = Modifier.clickable(onClick = onDismiss).padding(13.dp, 8.dp),
+                            )
+                        }
+                        Spacer(Modifier.width(9.dp))
+                        StickerHardShadowBox(shape = RoundedCornerShape(15.dp), backgroundColor = StickerColors.Pink) {
+                            Text(
+                                "guardar",
+                                style = StickerType.TitleMedium.let { it.copy(fontSize = 15.sp) },
+                                color = Color.White,
+                                modifier = Modifier
+                                    .clickable(enabled = name.isNotBlank()) { onRename(name) }
+                                    .padding(13.dp, 8.dp),
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun StickerDeletePlaylistDialog(playlistName: String, onDismiss: () -> Unit, onDelete: () -> Unit) {
+    Dialog(onDismissRequest = onDismiss) {
+        StickerHardShadowBox(shape = RoundedCornerShape(26.dp), borderWidth = 4.dp, shadowOffsetX = 7.dp, shadowOffsetY = 7.dp) {
+            Column(Modifier.fillMaxWidth()) {
+                Row(
+                    Modifier.fillMaxWidth().background(StickerColors.Grape, RoundedCornerShape(22.dp, 22.dp, 0.dp, 0.dp)).padding(16.dp, 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(Icons.Filled.Delete, contentDescription = null, tint = StickerColors.Ink)
+                    Spacer(Modifier.width(9.dp))
+                    Text("¿Borrar playlist?", style = StickerType.TitleMedium.let { it.copy(fontSize = 20.sp) }, color = StickerColors.Ink)
+                }
+                Column(Modifier.padding(16.dp)) {
+                    Text(
+                        "¿Seguro que quieres borrar \"$playlistName\"? Esta acción no se puede deshacer.",
+                        style = StickerType.HandwrittenSmall,
+                        color = StickerColors.Faded,
+                    )
+                    Spacer(Modifier.height(16.dp))
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                        StickerHardShadowBox(shape = RoundedCornerShape(15.dp)) {
+                            Text(
+                                "cancelar",
+                                style = StickerType.HandwrittenSmall,
+                                color = StickerColors.Faded,
+                                modifier = Modifier.clickable(onClick = onDismiss).padding(13.dp, 8.dp),
+                            )
+                        }
+                        Spacer(Modifier.width(9.dp))
+                        StickerHardShadowBox(shape = RoundedCornerShape(15.dp), backgroundColor = StickerColors.Pink) {
+                            Text(
+                                "borrar",
+                                style = StickerType.TitleMedium.let { it.copy(fontSize = 15.sp) },
+                                color = Color.White,
+                                modifier = Modifier.clickable(onClick = onDelete).padding(13.dp, 8.dp),
+                            )
+                        }
+                    }
+                }
+            }
+        }
     }
 }

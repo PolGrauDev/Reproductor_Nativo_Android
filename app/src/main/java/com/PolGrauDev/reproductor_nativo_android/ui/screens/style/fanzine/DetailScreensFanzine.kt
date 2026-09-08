@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
@@ -29,11 +30,8 @@ import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.MusicNote
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -42,10 +40,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.AppStyle
@@ -324,27 +325,107 @@ fun PlaylistDetailScreenFanzine(
     }
 
     if (showRenameDialog && playlist != null) {
-        var name by remember { mutableStateOf(playlist.name) }
-        AlertDialog(
-            onDismissRequest = { showRenameDialog = false },
-            title = { Text("Renombrar playlist") },
-            text = { OutlinedTextField(value = name, onValueChange = { name = it }, singleLine = true, modifier = Modifier.fillMaxWidth()) },
-            confirmButton = {
-                TextButton(onClick = { viewModel.renamePlaylist(playlistId, name); showRenameDialog = false }, enabled = name.isNotBlank()) { Text("Guardar") }
-            },
-            dismissButton = { TextButton(onClick = { showRenameDialog = false }) { Text("Cancelar") } },
+        FanzineRenamePlaylistDialog(
+            currentName = playlist.name,
+            onDismiss = { showRenameDialog = false },
+            onRename = { viewModel.renamePlaylist(playlistId, it); showRenameDialog = false },
         )
     }
 
     if (showDeleteDialog) {
-        AlertDialog(
-            onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Borrar playlist") },
-            text = { Text("¿Seguro que quieres borrar \"${playlist?.name}\"? Esta acción no se puede deshacer.") },
-            confirmButton = {
-                TextButton(onClick = { viewModel.deletePlaylist(playlistId); showDeleteDialog = false; onPlaylistDeleted() }) { Text("Borrar") }
-            },
-            dismissButton = { TextButton(onClick = { showDeleteDialog = false }) { Text("Cancelar") } },
+        FanzineDeletePlaylistDialog(
+            playlistName = playlist?.name ?: "",
+            onDismiss = { showDeleteDialog = false },
+            onDelete = { viewModel.deletePlaylist(playlistId); showDeleteDialog = false; onPlaylistDeleted() },
         )
+    }
+}
+
+@Composable
+private fun FanzineRenamePlaylistDialog(currentName: String, onDismiss: () -> Unit, onRename: (String) -> Unit) {
+    var name by remember { mutableStateOf(currentName) }
+    Dialog(onDismissRequest = onDismiss) {
+        Column(Modifier.rotate(-1f).background(FanzineColors.Paper)) {
+            Row(Modifier.fillMaxWidth().background(FanzineColors.Red).padding(14.dp, 11.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Filled.Edit, contentDescription = null, tint = FanzineColors.Ink)
+                Spacer(Modifier.width(8.dp))
+                Text("RENOMBRAR", fontFamily = FanzineFonts.Anton, fontSize = 20.sp, color = FanzineColors.Ink)
+            }
+            Column(Modifier.padding(14.dp)) {
+                Box(Modifier.border(2.dp, FanzineColors.Ink).fillMaxWidth().padding(11.dp, 9.dp)) {
+                    BasicTextField(
+                        value = name,
+                        onValueChange = { name = it },
+                        singleLine = true,
+                        textStyle = TextStyle(fontFamily = FanzineFonts.SpecialElite, fontSize = 15.sp, color = FanzineColors.Ink),
+                        cursorBrush = SolidColor(FanzineColors.Ink),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+                Spacer(Modifier.height(16.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    Text(
+                        "cancelar",
+                        fontFamily = FanzineFonts.SpecialElite,
+                        fontSize = 11.sp,
+                        color = FanzineColors.Grime,
+                        modifier = Modifier.border(2.dp, FanzineColors.Ink).clickable(onClick = onDismiss).padding(11.dp, 5.dp),
+                    )
+                    Spacer(Modifier.width(9.dp))
+                    Text(
+                        "guardar",
+                        fontFamily = FanzineFonts.SpecialElite,
+                        fontSize = 11.sp,
+                        color = FanzineColors.Paper,
+                        modifier = Modifier
+                            .background(FanzineColors.Ink)
+                            .clickable(enabled = name.isNotBlank()) { onRename(name) }
+                            .padding(12.dp, 7.dp),
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FanzineDeletePlaylistDialog(playlistName: String, onDismiss: () -> Unit, onDelete: () -> Unit) {
+    Dialog(onDismissRequest = onDismiss) {
+        Column(Modifier.rotate(-1f).background(FanzineColors.Paper)) {
+            Row(Modifier.fillMaxWidth().background(FanzineColors.Red).padding(14.dp, 11.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Filled.Delete, contentDescription = null, tint = FanzineColors.Ink)
+                Spacer(Modifier.width(8.dp))
+                Text("BORRAR LISTA", fontFamily = FanzineFonts.Anton, fontSize = 20.sp, color = FanzineColors.Ink)
+            }
+            Column(Modifier.padding(14.dp)) {
+                Text(
+                    "¿Seguro que quieres borrar \"$playlistName\"? Esta acción no se puede deshacer.",
+                    fontFamily = FanzineFonts.SpecialElite,
+                    fontSize = 13.sp,
+                    color = FanzineColors.Grime,
+                )
+                Spacer(Modifier.height(16.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    Text(
+                        "cancelar",
+                        fontFamily = FanzineFonts.SpecialElite,
+                        fontSize = 11.sp,
+                        color = FanzineColors.Grime,
+                        modifier = Modifier.border(2.dp, FanzineColors.Ink).clickable(onClick = onDismiss).padding(11.dp, 5.dp),
+                    )
+                    Spacer(Modifier.width(9.dp))
+                    Text(
+                        "borrar",
+                        fontFamily = FanzineFonts.SpecialElite,
+                        fontSize = 11.sp,
+                        color = FanzineColors.Paper,
+                        modifier = Modifier
+                            .background(FanzineColors.Red)
+                            .clickable(onClick = onDelete)
+                            .padding(12.dp, 7.dp),
+                    )
+                }
+            }
+        }
     }
 }

@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -27,12 +28,9 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -44,8 +42,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import coil3.compose.AsyncImage
 import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.AppStyle
 import com.PolGrauDev.reproductor_nativo_android.data.AlbumArtRequest
@@ -424,15 +424,56 @@ private fun FanzinePlaylistsTab(
     }
 
     if (showCreateDialog) {
-        var name by remember { mutableStateOf("") }
-        AlertDialog(
-            onDismissRequest = { showCreateDialog = false },
-            title = { Text("Nueva playlist") },
-            text = { OutlinedTextField(value = name, onValueChange = { name = it }, singleLine = true, modifier = Modifier.fillMaxWidth()) },
-            confirmButton = {
-                TextButton(onClick = { onCreatePlaylist(name); showCreateDialog = false }, enabled = name.isNotBlank()) { Text("Crear") }
-            },
-            dismissButton = { TextButton(onClick = { showCreateDialog = false }) { Text("Cancelar") } },
+        FanzineCreatePlaylistDialog(
+            onDismiss = { showCreateDialog = false },
+            onCreate = { onCreatePlaylist(it); showCreateDialog = false },
         )
+    }
+}
+
+@Composable
+private fun FanzineCreatePlaylistDialog(onDismiss: () -> Unit, onCreate: (String) -> Unit) {
+    var name by remember { mutableStateOf("") }
+    Dialog(onDismissRequest = onDismiss) {
+        Column(Modifier.rotate(-1f).background(FanzineColors.Paper)) {
+            Row(Modifier.fillMaxWidth().background(FanzineColors.Red).padding(14.dp, 11.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Filled.Add, contentDescription = null, tint = FanzineColors.Ink)
+                Spacer(Modifier.width(8.dp))
+                Text("NUEVA PLAYLIST", fontFamily = FanzineFonts.Anton, fontSize = 20.sp, color = FanzineColors.Ink)
+            }
+            Column(Modifier.padding(14.dp)) {
+                Box(Modifier.border(2.dp, FanzineColors.Ink).fillMaxWidth().padding(11.dp, 9.dp)) {
+                    BasicTextField(
+                        value = name,
+                        onValueChange = { name = it },
+                        singleLine = true,
+                        textStyle = TextStyle(fontFamily = FanzineFonts.SpecialElite, fontSize = 15.sp, color = FanzineColors.Ink),
+                        cursorBrush = SolidColor(FanzineColors.Ink),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+                Spacer(Modifier.height(16.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    Text(
+                        "cancelar",
+                        fontFamily = FanzineFonts.SpecialElite,
+                        fontSize = 11.sp,
+                        color = FanzineColors.Grime,
+                        modifier = Modifier.border(2.dp, FanzineColors.Ink).clickable(onClick = onDismiss).padding(11.dp, 5.dp),
+                    )
+                    Spacer(Modifier.width(9.dp))
+                    Text(
+                        "crear",
+                        fontFamily = FanzineFonts.SpecialElite,
+                        fontSize = 11.sp,
+                        color = FanzineColors.Paper,
+                        modifier = Modifier
+                            .background(FanzineColors.Ink)
+                            .clickable(enabled = name.isNotBlank()) { onCreate(name) }
+                            .padding(12.dp, 7.dp),
+                    )
+                }
+            }
+        }
     }
 }

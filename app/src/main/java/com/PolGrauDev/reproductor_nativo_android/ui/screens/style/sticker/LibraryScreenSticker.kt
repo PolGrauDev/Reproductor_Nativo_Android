@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -28,12 +29,9 @@ import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.automirrored.filled.Sort
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -47,6 +45,7 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import coil3.compose.AsyncImage
 import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.AppStyle
 import com.PolGrauDev.reproductor_nativo_android.data.AlbumArtRequest
@@ -405,16 +404,63 @@ private fun StickerPlaylistsTab(
     }
 
     if (showCreateDialog) {
-        var name by remember { mutableStateOf("") }
-        AlertDialog(
-            onDismissRequest = { showCreateDialog = false },
-            title = { Text("Nueva playlist") },
-            text = { OutlinedTextField(value = name, onValueChange = { name = it }, singleLine = true, modifier = Modifier.fillMaxWidth()) },
-            confirmButton = {
-                TextButton(onClick = { onCreatePlaylist(name); showCreateDialog = false }, enabled = name.isNotBlank()) { Text("Crear") }
-            },
-            dismissButton = { TextButton(onClick = { showCreateDialog = false }) { Text("Cancelar") } },
+        StickerCreatePlaylistDialog(
+            onDismiss = { showCreateDialog = false },
+            onCreate = { onCreatePlaylist(it); showCreateDialog = false },
         )
+    }
+}
+
+@Composable
+private fun StickerCreatePlaylistDialog(onDismiss: () -> Unit, onCreate: (String) -> Unit) {
+    var name by remember { mutableStateOf("") }
+    Dialog(onDismissRequest = onDismiss) {
+        StickerHardShadowBox(shape = RoundedCornerShape(26.dp), borderWidth = 4.dp, shadowOffsetX = 7.dp, shadowOffsetY = 7.dp) {
+            Column(Modifier.fillMaxWidth()) {
+                Row(
+                    Modifier.fillMaxWidth().background(StickerColors.Grape, RoundedCornerShape(22.dp, 22.dp, 0.dp, 0.dp)).padding(16.dp, 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(Icons.Filled.Add, contentDescription = null, tint = StickerColors.Ink)
+                    Spacer(Modifier.width(9.dp))
+                    Text("Nueva playlist", style = StickerType.TitleMedium.let { it.copy(fontSize = 20.sp) }, color = StickerColors.Ink)
+                }
+                Column(Modifier.padding(16.dp)) {
+                    Box(Modifier.background(Color.White, RoundedCornerShape(16.dp)).fillMaxWidth().padding(12.dp, 10.dp)) {
+                        BasicTextField(
+                            value = name,
+                            onValueChange = { name = it },
+                            singleLine = true,
+                            textStyle = StickerType.HandwrittenSmall.copy(color = StickerColors.Ink),
+                            cursorBrush = SolidColor(StickerColors.Ink),
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+                    Spacer(Modifier.height(16.dp))
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                        StickerHardShadowBox(shape = RoundedCornerShape(15.dp)) {
+                            Text(
+                                "cancelar",
+                                style = StickerType.HandwrittenSmall,
+                                color = StickerColors.Faded,
+                                modifier = Modifier.clickable(onClick = onDismiss).padding(13.dp, 8.dp),
+                            )
+                        }
+                        Spacer(Modifier.width(9.dp))
+                        StickerHardShadowBox(shape = RoundedCornerShape(15.dp), backgroundColor = StickerColors.Pink) {
+                            Text(
+                                "crear",
+                                style = StickerType.TitleMedium.let { it.copy(fontSize = 15.sp) },
+                                color = Color.White,
+                                modifier = Modifier
+                                    .clickable(enabled = name.isNotBlank()) { onCreate(name) }
+                                    .padding(13.dp, 8.dp),
+                            )
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
