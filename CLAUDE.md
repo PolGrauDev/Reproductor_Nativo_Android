@@ -272,9 +272,15 @@ SettingsRepository (DataStore: fade
   with `android:maxSdkVersion="32"`). `MainActivity` gates the whole `NavGraph` behind this
   permission state.
 - **`ui/screens/SettingsScreen` (`Routes.SETTINGS`)** — reached from an `IconButton` in
-  `LibraryScreen`'s `TopAppBar`, next to the existing `SortMenu`. Hosts the sleep timer picker
-  (reuses the `Box`/`IconButton`/`DropdownMenu` pattern from `LibraryScreen`'s `SortMenu`) and the
-  fade-duration `Slider` described under `player/PlaybackConnection` above.
+  `LibraryScreen`'s `TopAppBar`, next to the existing `SortMenu`. Hosts the sleep timer and app
+  style pickers — each style variant hand-rolls its own reveal rather than reusing `DropdownMenu`
+  (Papel: `clickable` + `remember { mutableStateOf(false) }` in-place expansion; Sticker/Fanzine:
+  always-visible tappable chip rows, no expand/collapse state) — and the fade-duration `Slider`
+  described under `player/PlaybackConnection` above. Every per-style Settings screen's root
+  `Column` must carry `.verticalScroll(rememberScrollState())` — Papel's originally lacked it,
+  so on a real device the expanded sleep-timer/style options could render past the bottom of the
+  visible viewport, clipped and untappable, even though the tap correctly toggled the expansion
+  state.
 - **`NowPlayingScreen`'s search icon → Library** — all three style variants' top bar take an
   `onSearchClick` param; `ui/navigation/NavGraph.kt` wires it to
   `navController.navigate(Routes.SONG_LIST) { popUpTo(Routes.SONG_LIST) { inclusive = true } }`
