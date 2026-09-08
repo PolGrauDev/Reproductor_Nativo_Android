@@ -121,7 +121,7 @@ The quickest way to try the app is to download the prebuilt APK from
 **[GitHub Releases](https://github.com/PolGrauDev/Reproductor_Nativo_Android/releases/latest)**
 (no Google Play, no build step required):
 
-1. Download `Reproductor Add Free.apk` from the [latest release](https://github.com/PolGrauDev/Reproductor_Nativo_Android/releases/latest).
+1. Download `Reproductor.Add.Free.apk` from the [latest release](https://github.com/PolGrauDev/Reproductor_Nativo_Android/releases/latest).
 2. Android blocks installation by default (unknown source) — when you open the downloaded
    APK, follow the system prompt to allow "install unknown apps" for whichever browser or
    file manager you used to download it.

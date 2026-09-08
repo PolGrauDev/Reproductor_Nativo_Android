@@ -126,7 +126,7 @@ La forma más rápida de probar la app es descargar el APK ya compilado desde
 **[GitHub Releases](https://github.com/PolGrauDev/Reproductor_Nativo_Android/releases/latest)**
 (no requiere Google Play ni compilar nada):
 
-1. Descarga `Reproductor Add Free.apk` desde la [última release](https://github.com/PolGrauDev/Reproductor_Nativo_Android/releases/latest).
+1. Descarga `Reproductor.Add.Free.apk` desde la [última release](https://github.com/PolGrauDev/Reproductor_Nativo_Android/releases/latest).
 2. Android bloqueará la instalación por defecto (origen desconocido) — al abrir el APK
    descargado, sigue el aviso del sistema para permitir "instalar apps desconocidas" desde
    el navegador o gestor de archivos que hayas usado para descargarlo.
