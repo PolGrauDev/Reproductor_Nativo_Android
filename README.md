@@ -19,6 +19,7 @@ pantalla de bloqueo.
 [![Min SDK](https://img.shields.io/badge/minSdk-24-brightgreen)](#requisitos-y-permisos)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Status](https://img.shields.io/badge/status-WIP-orange)](#-estado-del-proyecto)
+[![Release](https://img.shields.io/github/v/release/PolGrauDev/Reproductor_Nativo_Android?label=descarga)](https://github.com/PolGrauDev/Reproductor_Nativo_Android/releases/latest)
 
 </div>
 
@@ -27,11 +28,10 @@ pantalla de bloqueo.
 > Este es un **proyecto personal en construcción**, pensado para mi portfolio como
 > desarrollador Android. Ya es funcional en el día a día (biblioteca, reproducción,
 > favoritos, listas, ajustes, estilos visuales...), pero **todavía le faltan piezas**
-> antes de considerarlo "terminado": no tiene build de release firmado, no hay tests
-> instrumentados (los unitarios ya cubren buena parte de la lógica), y algunas ideas de
-> la lista de más abajo siguen pendientes. Si lo estás mirando como muestra de código,
-> ten esto en cuenta — y si algo te llama la atención (para bien o para mal), los issues
-> son bienvenidos.
+> antes de considerarlo "terminado": no hay tests instrumentados (los unitarios ya cubren
+> buena parte de la lógica), y algunas ideas de la lista de más abajo siguen pendientes.
+> Si lo estás mirando como muestra de código, ten esto en cuenta — y si algo te llama la
+> atención (para bien o para mal), los issues son bienvenidos.
 
 ## 📱 Capturas de pantalla
 
@@ -120,6 +120,22 @@ el dueño del estado de reproducción.
 | `FOREGROUND_SERVICE` / `FOREGROUND_SERVICE_MEDIA_PLAYBACK` | Mantener la reproducción activa en segundo plano |
 | `POST_NOTIFICATIONS` (API 33+) | Mostrar la notificación de reproducción/controles |
 
+## 📲 Instalación
+
+La forma más rápida de probar la app es descargar el APK ya compilado desde
+**[GitHub Releases](https://github.com/PolGrauDev/Reproductor_Nativo_Android/releases/latest)**
+(no requiere Google Play ni compilar nada):
+
+1. Descarga `Reproductor Add Free.apk` desde la [última release](https://github.com/PolGrauDev/Reproductor_Nativo_Android/releases/latest).
+2. Android bloqueará la instalación por defecto (origen desconocido) — al abrir el APK
+   descargado, sigue el aviso del sistema para permitir "instalar apps desconocidas" desde
+   el navegador o gestor de archivos que hayas usado para descargarlo.
+3. Instala y abre la app. Requiere **Android 7.0 (API 24) o superior**.
+
+> El APK está firmado con la clave de release del proyecto — instalar una versión nueva
+> sobre una anterior (actualizar) funciona sin desinstalar, siempre que provenga de esta
+> misma clave.
+
 ## 🚀 Cómo compilar y ejecutar
 
 ```bash
@@ -136,7 +152,8 @@ automático) y ejecutar desde ahí.
 
 ## 🗺️ Roadmap / Pendiente
 
-- [ ] Firma de build de release (`signingConfigs`)
+- [x] Firma de build de release (`signingConfigs`) + publicación automática en GitHub
+  Releases vía GitHub Actions al pushear un tag `vX.Y.Z`
 - [ ] Tests instrumentados más allá de la plantilla por defecto — los unitarios ya cubren
   buena parte de la capa de datos y lógica pura (`MediaRepository`, `PlaylistRepository`,
   `SettingsRepository`, la lógica extraíble de `PlaybackConnection`/`PlaybackService`/

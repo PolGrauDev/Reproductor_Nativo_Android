@@ -1,7 +1,21 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
+}
+
+// Firma de release: `keystore.properties` no se commitea (ver .gitignore) — cuando no existe
+// (p.ej. un clon nuevo del repo sin la keystore) el build de release simplemente sale sin firmar
+// en vez de fallar. En CI, el workflow reconstruye ambos archivos a partir de secrets antes de
+// compilar.
+val keystorePropertiesFile = rootProject.file("keystore.properties")
+val keystoreProperties = Properties()
+val hasReleaseKeystore = keystorePropertiesFile.exists()
+if (hasReleaseKeystore) {
+    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
 
 android {
@@ -22,10 +36,24 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        if (hasReleaseKeystore) {
+            create("release") {
+                storeFile = rootProject.file(keystoreProperties["storeFile"] as String)
+                storePassword = keystoreProperties["storePassword"] as String
+                keyAlias = keystoreProperties["keyAlias"] as String
+                keyPassword = keystoreProperties["keyPassword"] as String
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+            if (hasReleaseKeystore) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -38,6 +66,26 @@ android {
     }
     buildFeatures {
         compose = true
+    }
+}
+
+// Nombre de archivo del APK de release para distribución (GitHub Releases) — el de debug se
+// deja con el nombre por defecto (`app-debug.apk`), que es el que usan el README y los comandos
+// `adb install` documentados. Renombrar vía una tarea posterior al empaquetado en vez de la
+// Variant API de AGP: más estable entre versiones que depender de un método concreto que puede
+// cambiar de nombre/firma según la versión de AGP.
+val renameReleaseApk = tasks.register("renameReleaseApk") {
+    val releaseDir = layout.buildDirectory.dir("outputs/apk/release")
+    doLast {
+        val dir = releaseDir.get().asFile
+        val original = dir.listFiles { f -> f.name.endsWith(".apk") && f.name != "Reproductor Add Free.apk" }
+        original?.forEach { it.renameTo(File(dir, "Reproductor Add Free.apk")) }
+    }
+}
+
+afterEvaluate {
+    tasks.named("assembleRelease") {
+        finalizedBy(renameReleaseApk)
     }
 }
 
