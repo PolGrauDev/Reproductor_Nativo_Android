@@ -1,13 +1,20 @@
 package com.PolGrauDev.reproductor_nativo_android.ui.navigation
 
 import android.net.Uri
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.PolGrauDev.reproductor_nativo_android.ui.components.MiniPlayer
 import com.PolGrauDev.reproductor_nativo_android.ui.screens.AlbumDetailScreen
 import com.PolGrauDev.reproductor_nativo_android.ui.screens.ArtistDetailScreen
 import com.PolGrauDev.reproductor_nativo_android.ui.screens.FavoritesScreen
@@ -43,96 +50,119 @@ fun NavGraph(
     viewModel: MusicViewModel,
     navController: NavHostController = rememberNavController(),
 ) {
-    NavHost(navController = navController, startDestination = Routes.SONG_LIST) {
-        composable(Routes.SONG_LIST) {
-            LibraryScreen(
-                viewModel = viewModel,
-                onSongClick = { navController.navigate(Routes.NOW_PLAYING) },
-                onAlbumClick = { album -> navController.navigate(Routes.albumDetail(album.albumId)) },
-                onArtistClick = { artist -> navController.navigate(Routes.artistDetail(artist.artistId)) },
-                onFolderClick = { folder -> navController.navigate(Routes.folderDetail(folder.path)) },
-                onFavoritesClick = { navController.navigate(Routes.FAVORITES) },
-                onPlaylistClick = { playlistId -> navController.navigate(Routes.playlistDetail(playlistId)) },
-                onSettingsClick = { navController.navigate(Routes.SETTINGS) },
-            )
-        }
-        composable(Routes.SETTINGS) {
-            SettingsScreen(
-                viewModel = viewModel,
-                onBack = { navController.popBackStack() },
-            )
-        }
-        composable(Routes.NOW_PLAYING) {
-            NowPlayingScreen(
-                viewModel = viewModel,
-                onBack = { navController.popBackStack() },
-                onQueueClick = { navController.navigate(Routes.QUEUE) },
-                onSearchClick = {
-                    navController.navigate(Routes.SONG_LIST) { popUpTo(Routes.SONG_LIST) { inclusive = true } }
-                },
-            )
-        }
-        composable(Routes.QUEUE) {
-            QueueScreen(
-                viewModel = viewModel,
-                onBack = { navController.popBackStack() },
-            )
-        }
-        composable(
-            route = Routes.ALBUM_DETAIL,
-            arguments = listOf(navArgument("albumId") { type = NavType.LongType }),
-        ) { backStackEntry ->
-            val albumId = backStackEntry.arguments?.getLong("albumId") ?: NO_ID
-            AlbumDetailScreen(
-                viewModel = viewModel,
-                albumId = albumId.takeIf { it != NO_ID },
-                onBack = { navController.popBackStack() },
-                onSongClick = { navController.navigate(Routes.NOW_PLAYING) },
-            )
-        }
-        composable(
-            route = Routes.ARTIST_DETAIL,
-            arguments = listOf(navArgument("artistId") { type = NavType.LongType }),
-        ) { backStackEntry ->
-            val artistId = backStackEntry.arguments?.getLong("artistId") ?: NO_ID
-            ArtistDetailScreen(
-                viewModel = viewModel,
-                artistId = artistId.takeIf { it != NO_ID },
-                onBack = { navController.popBackStack() },
-                onSongClick = { navController.navigate(Routes.NOW_PLAYING) },
-            )
-        }
-        composable(
-            route = Routes.FOLDER_DETAIL,
-            arguments = listOf(navArgument("folderPath") { type = NavType.StringType }),
-        ) { backStackEntry ->
-            val folderPath = Uri.decode(backStackEntry.arguments?.getString("folderPath") ?: "")
-            FolderDetailScreen(
-                viewModel = viewModel,
-                folderPath = folderPath,
-                onBack = { navController.popBackStack() },
-                onSongClick = { navController.navigate(Routes.NOW_PLAYING) },
-            )
-        }
-        composable(Routes.FAVORITES) {
-            FavoritesScreen(
-                viewModel = viewModel,
-                onBack = { navController.popBackStack() },
-                onSongClick = { navController.navigate(Routes.NOW_PLAYING) },
-            )
-        }
-        composable(
-            route = Routes.PLAYLIST_DETAIL,
-            arguments = listOf(navArgument("playlistId") { type = NavType.LongType }),
-        ) { backStackEntry ->
-            val playlistId = backStackEntry.arguments?.getLong("playlistId") ?: NO_ID
-            PlaylistDetailScreen(
-                viewModel = viewModel,
-                playlistId = playlistId,
-                onBack = { navController.popBackStack() },
-                onSongClick = { navController.navigate(Routes.NOW_PLAYING) },
-                onPlaylistDeleted = { navController.popBackStack() },
-            )
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val backStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = backStackEntry?.destination?.route
+    val currentSong = uiState.currentSong
+
+    Scaffold(
+        bottomBar = {
+            if (currentSong != null && currentRoute != Routes.NOW_PLAYING) {
+                MiniPlayer(
+                    appStyle = uiState.appStyle,
+                    song = currentSong,
+                    isPlaying = uiState.playback.isPlaying,
+                    onTogglePlayPause = viewModel::togglePlayPause,
+                    onClick = { navController.navigate(Routes.NOW_PLAYING) },
+                )
+            }
+        },
+    ) { innerPadding ->
+        NavHost(
+            navController = navController,
+            startDestination = Routes.SONG_LIST,
+            modifier = Modifier.padding(innerPadding),
+        ) {
+            composable(Routes.SONG_LIST) {
+                LibraryScreen(
+                    viewModel = viewModel,
+                    onSongClick = { navController.navigate(Routes.NOW_PLAYING) },
+                    onAlbumClick = { album -> navController.navigate(Routes.albumDetail(album.albumId)) },
+                    onArtistClick = { artist -> navController.navigate(Routes.artistDetail(artist.artistId)) },
+                    onFolderClick = { folder -> navController.navigate(Routes.folderDetail(folder.path)) },
+                    onFavoritesClick = { navController.navigate(Routes.FAVORITES) },
+                    onPlaylistClick = { playlistId -> navController.navigate(Routes.playlistDetail(playlistId)) },
+                    onSettingsClick = { navController.navigate(Routes.SETTINGS) },
+                )
+            }
+            composable(Routes.SETTINGS) {
+                SettingsScreen(
+                    viewModel = viewModel,
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable(Routes.NOW_PLAYING) {
+                NowPlayingScreen(
+                    viewModel = viewModel,
+                    onBack = { navController.popBackStack() },
+                    onQueueClick = { navController.navigate(Routes.QUEUE) },
+                    onSearchClick = {
+                        navController.navigate(Routes.SONG_LIST) { popUpTo(Routes.SONG_LIST) { inclusive = true } }
+                    },
+                )
+            }
+            composable(Routes.QUEUE) {
+                QueueScreen(
+                    viewModel = viewModel,
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable(
+                route = Routes.ALBUM_DETAIL,
+                arguments = listOf(navArgument("albumId") { type = NavType.LongType }),
+            ) { backStackEntry ->
+                val albumId = backStackEntry.arguments?.getLong("albumId") ?: NO_ID
+                AlbumDetailScreen(
+                    viewModel = viewModel,
+                    albumId = albumId.takeIf { it != NO_ID },
+                    onBack = { navController.popBackStack() },
+                    onSongClick = { navController.navigate(Routes.NOW_PLAYING) },
+                )
+            }
+            composable(
+                route = Routes.ARTIST_DETAIL,
+                arguments = listOf(navArgument("artistId") { type = NavType.LongType }),
+            ) { backStackEntry ->
+                val artistId = backStackEntry.arguments?.getLong("artistId") ?: NO_ID
+                ArtistDetailScreen(
+                    viewModel = viewModel,
+                    artistId = artistId.takeIf { it != NO_ID },
+                    onBack = { navController.popBackStack() },
+                    onSongClick = { navController.navigate(Routes.NOW_PLAYING) },
+                )
+            }
+            composable(
+                route = Routes.FOLDER_DETAIL,
+                arguments = listOf(navArgument("folderPath") { type = NavType.StringType }),
+            ) { backStackEntry ->
+                val folderPath = Uri.decode(backStackEntry.arguments?.getString("folderPath") ?: "")
+                FolderDetailScreen(
+                    viewModel = viewModel,
+                    folderPath = folderPath,
+                    onBack = { navController.popBackStack() },
+                    onSongClick = { navController.navigate(Routes.NOW_PLAYING) },
+                )
+            }
+            composable(Routes.FAVORITES) {
+                FavoritesScreen(
+                    viewModel = viewModel,
+                    onBack = { navController.popBackStack() },
+                    onSongClick = { navController.navigate(Routes.NOW_PLAYING) },
+                )
+            }
+            composable(
+                route = Routes.PLAYLIST_DETAIL,
+                arguments = listOf(navArgument("playlistId") { type = NavType.LongType }),
+            ) { backStackEntry ->
+                val playlistId = backStackEntry.arguments?.getLong("playlistId") ?: NO_ID
+                PlaylistDetailScreen(
+                    viewModel = viewModel,
+                    playlistId = playlistId,
+                    onBack = { navController.popBackStack() },
+                    onSongClick = { navController.navigate(Routes.NOW_PLAYING) },
+                    onPlaylistDeleted = { navController.popBackStack() },
+                )
+            }
         }
     }
 }
