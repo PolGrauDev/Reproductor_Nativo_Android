@@ -28,7 +28,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil3.compose.AsyncImage
+import coil3.compose.SubcomposeAsyncImage
+import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.papel.AlbumArtFallbackPapel
 import com.PolGrauDev.reproductor_nativo_android.data.AlbumArtRequest
 import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.papel.PapelColors
 import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.papel.PapelRowDivider
@@ -77,11 +78,13 @@ fun FavoritesScreenPapel(viewModel: MusicViewModel, onBack: () -> Unit, onSongCl
                             }.padding(20.dp, 16.dp, 20.dp, 16.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            AsyncImage(
+                            SubcomposeAsyncImage(
                                 model = AlbumArtRequest(song.contentUri),
                                 contentDescription = null,
                                 modifier = Modifier.size(48.dp).clip(RoundedCornerShape(2.dp)),
                                 contentScale = ContentScale.Crop,
+                                loading = { AlbumArtFallbackPapel() },
+                                error = { AlbumArtFallbackPapel() },
                             )
                             Spacer(Modifier.width(14.dp))
                             Column(Modifier.weight(1f)) {

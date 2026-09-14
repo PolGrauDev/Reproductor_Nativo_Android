@@ -18,13 +18,14 @@ import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.AppStyle
 fun AddToPlaylistDialog(
     appStyle: AppStyle,
     playlists: List<PlaylistSummary>,
+    playlistIdsWithSong: Set<Long>,
     onDismiss: () -> Unit,
     onPlaylistSelected: (playlistId: Long) -> Unit,
     onCreatePlaylist: (name: String) -> Unit,
 ) {
     when (appStyle) {
-        AppStyle.PAPEL -> AddToPlaylistDialogPapel(playlists, onDismiss, onPlaylistSelected, onCreatePlaylist)
-        AppStyle.STICKERS -> AddToPlaylistDialogSticker(playlists, onDismiss, onPlaylistSelected, onCreatePlaylist)
-        AppStyle.FANZINE -> AddToPlaylistDialogFanzine(playlists, onDismiss, onPlaylistSelected, onCreatePlaylist)
+        AppStyle.PAPEL -> AddToPlaylistDialogPapel(playlists, playlistIdsWithSong, onDismiss, onPlaylistSelected, onCreatePlaylist)
+        AppStyle.STICKERS -> AddToPlaylistDialogSticker(playlists, playlistIdsWithSong, onDismiss, onPlaylistSelected, onCreatePlaylist)
+        AppStyle.FANZINE -> AddToPlaylistDialogFanzine(playlists, playlistIdsWithSong, onDismiss, onPlaylistSelected, onCreatePlaylist)
     }
 }

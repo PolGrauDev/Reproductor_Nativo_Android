@@ -48,10 +48,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil3.compose.AsyncImage
+import coil3.compose.SubcomposeAsyncImage
+import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.sticker.AlbumArtFallbackSticker
 import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.AppStyle
 import com.PolGrauDev.reproductor_nativo_android.data.AlbumArtRequest
 import com.PolGrauDev.reproductor_nativo_android.data.model.Song
+import com.PolGrauDev.reproductor_nativo_android.ui.components.AddSongsToPlaylistDialog
 import com.PolGrauDev.reproductor_nativo_android.ui.components.AddToPlaylistDialog
 import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.sticker.StickerColors
 import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.sticker.StickerHardShadowBox
@@ -91,7 +93,14 @@ fun AlbumDetailScreenSticker(viewModel: MusicViewModel, albumId: Long?, onBack: 
             item {
                 Column(Modifier.fillMaxWidth().padding(bottom = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     StickerHardShadowBox(modifier = Modifier.size(140.dp), shape = RoundedCornerShape(22.dp), rotationDegrees = -2f) {
-                        AsyncImage(model = AlbumArtRequest(album.songs.first().contentUri), contentDescription = null, modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(20.dp)), contentScale = ContentScale.Crop)
+                        SubcomposeAsyncImage(
+                            model = AlbumArtRequest(album.songs.first().contentUri),
+                            contentDescription = null,
+                            modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(20.dp)),
+                            contentScale = ContentScale.Crop,
+                            loading = { AlbumArtFallbackSticker() },
+                            error = { AlbumArtFallbackSticker() },
+                        )
                     }
                     Spacer(Modifier.height(14.dp))
                     Text(album.title, style = StickerType.HeadlineLarge, color = StickerColors.Ink, textAlign = TextAlign.Center, maxLines = 2)
@@ -113,9 +122,12 @@ fun AlbumDetailScreenSticker(viewModel: MusicViewModel, albumId: Long?, onBack: 
     }
 
     songForPlaylistDialog?.let { song ->
+        val playlistIdsWithSong by remember(song.id) { viewModel.playlistIdsContainingSong(song.id) }
+            .collectAsStateWithLifecycle(initialValue = emptySet())
         AddToPlaylistDialog(
             appStyle = AppStyle.STICKERS,
             playlists = uiState.playlists,
+            playlistIdsWithSong = playlistIdsWithSong,
             onDismiss = { songForPlaylistDialog = null },
             onPlaylistSelected = { playlistId -> viewModel.addSongToPlaylist(playlistId, song.id); songForPlaylistDialog = null },
             onCreatePlaylist = { name -> viewModel.createPlaylistAndAddSong(name, song.id); songForPlaylistDialog = null },
@@ -175,7 +187,14 @@ fun ArtistDetailScreenSticker(viewModel: MusicViewModel, artistId: Long?, onBack
                         modifier = Modifier.fillMaxWidth().clickable { viewModel.playSong(song, fromList = artist.songs); onSongClick() }.padding(9.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        AsyncImage(model = AlbumArtRequest(song.contentUri), contentDescription = null, modifier = Modifier.size(50.dp).clip(RoundedCornerShape(14.dp)), contentScale = ContentScale.Crop)
+                        SubcomposeAsyncImage(
+                            model = AlbumArtRequest(song.contentUri),
+                            contentDescription = null,
+                            modifier = Modifier.size(50.dp).clip(RoundedCornerShape(14.dp)),
+                            contentScale = ContentScale.Crop,
+                            loading = { AlbumArtFallbackSticker() },
+                            error = { AlbumArtFallbackSticker() },
+                        )
                         Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)) {
                             Text(song.title, style = StickerType.TitleMedium, color = StickerColors.Ink, maxLines = 1)
@@ -196,9 +215,12 @@ fun ArtistDetailScreenSticker(viewModel: MusicViewModel, artistId: Long?, onBack
     }
 
     songForPlaylistDialog?.let { song ->
+        val playlistIdsWithSong by remember(song.id) { viewModel.playlistIdsContainingSong(song.id) }
+            .collectAsStateWithLifecycle(initialValue = emptySet())
         AddToPlaylistDialog(
             appStyle = AppStyle.STICKERS,
             playlists = uiState.playlists,
+            playlistIdsWithSong = playlistIdsWithSong,
             onDismiss = { songForPlaylistDialog = null },
             onPlaylistSelected = { playlistId -> viewModel.addSongToPlaylist(playlistId, song.id); songForPlaylistDialog = null },
             onCreatePlaylist = { name -> viewModel.createPlaylistAndAddSong(name, song.id); songForPlaylistDialog = null },
@@ -239,9 +261,12 @@ fun FolderDetailScreenSticker(viewModel: MusicViewModel, folderPath: String, onB
     }
 
     songForPlaylistDialog?.let { song ->
+        val playlistIdsWithSong by remember(song.id) { viewModel.playlistIdsContainingSong(song.id) }
+            .collectAsStateWithLifecycle(initialValue = emptySet())
         AddToPlaylistDialog(
             appStyle = AppStyle.STICKERS,
             playlists = uiState.playlists,
+            playlistIdsWithSong = playlistIdsWithSong,
             onDismiss = { songForPlaylistDialog = null },
             onPlaylistSelected = { playlistId -> viewModel.addSongToPlaylist(playlistId, song.id); songForPlaylistDialog = null },
             onCreatePlaylist = { name -> viewModel.createPlaylistAndAddSong(name, song.id); songForPlaylistDialog = null },
@@ -263,9 +288,11 @@ fun PlaylistDetailScreenSticker(
     val playlist = uiState.playlists.firstOrNull { it.id == playlistId }
     var showRenameDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
+    var showAddSongsDialog by remember { mutableStateOf(false) }
 
     Column(Modifier.fillMaxSize().background(StickerColors.Paper)) {
         StickerDetailTopBar(playlist?.name ?: "Playlist", onBack) {
+            Icon(Icons.Filled.Add, contentDescription = "Añadir canciones", tint = StickerColors.Ink, modifier = Modifier.clickable { showAddSongsDialog = true }.padding(6.dp))
             Icon(Icons.Filled.Edit, contentDescription = "Renombrar playlist", tint = StickerColors.Ink, modifier = Modifier.clickable { showRenameDialog = true }.padding(6.dp))
             Icon(Icons.Filled.Delete, contentDescription = "Borrar playlist", tint = StickerColors.Ink, modifier = Modifier.clickable { showDeleteDialog = true }.padding(6.dp))
         }
@@ -281,7 +308,14 @@ fun PlaylistDetailScreenSticker(
                             modifier = Modifier.fillMaxWidth().clickable { viewModel.playSong(song, fromList = songs); onSongClick() }.padding(9.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            AsyncImage(model = AlbumArtRequest(song.contentUri), contentDescription = null, modifier = Modifier.size(46.dp).clip(RoundedCornerShape(14.dp)), contentScale = ContentScale.Crop)
+                            SubcomposeAsyncImage(
+                                model = AlbumArtRequest(song.contentUri),
+                                contentDescription = null,
+                                modifier = Modifier.size(46.dp).clip(RoundedCornerShape(14.dp)),
+                                contentScale = ContentScale.Crop,
+                                loading = { AlbumArtFallbackSticker() },
+                                error = { AlbumArtFallbackSticker() },
+                            )
                             Spacer(Modifier.width(12.dp))
                             Column(Modifier.weight(1f)) {
                                 Text(song.title, style = StickerType.TitleMedium, color = StickerColors.Ink, maxLines = 1)
@@ -325,6 +359,19 @@ fun PlaylistDetailScreenSticker(
             playlistName = playlist?.name ?: "",
             onDismiss = { showDeleteDialog = false },
             onDelete = { viewModel.deletePlaylist(playlistId); showDeleteDialog = false; onPlaylistDeleted() },
+        )
+    }
+
+    if (showAddSongsDialog) {
+        AddSongsToPlaylistDialog(
+            appStyle = AppStyle.STICKERS,
+            allSongs = uiState.songs,
+            songIdsAlreadyInPlaylist = songs.map { it.id }.toSet(),
+            onDismiss = { showAddSongsDialog = false },
+            onAddSongs = { ids ->
+                ids.forEach { viewModel.addSongToPlaylist(playlistId, it) }
+                showAddSongsDialog = false
+            },
         )
     }
 }

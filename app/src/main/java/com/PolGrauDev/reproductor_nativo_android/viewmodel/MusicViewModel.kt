@@ -24,6 +24,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -282,6 +283,14 @@ class MusicViewModel(
     fun moveSongInPlaylist(playlistId: Long, songIds: List<Long>, from: Int, to: Int) {
         viewModelScope.launch { playlistRepository.moveSong(playlistId, songIds, from, to) }
     }
+
+    /**
+     * Colectado directamente por `AddToPlaylistDialog*`; no vive en [MusicUiState] porque está
+     * parametrizado por canción. Permite deshabilitar en el diálogo las playlists que ya
+     * contienen la canción, en vez de dejar que el usuario intente añadirla de nuevo.
+     */
+    fun playlistIdsContainingSong(songId: Long): Flow<Set<Long>> =
+        playlistRepository.observePlaylistIdsContainingSong(songId).map { it.toSet() }
 
     /**
      * Colectado directamente por la pantalla de detalle de playlist; no vive en [MusicUiState]

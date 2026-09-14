@@ -53,7 +53,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.unit.sp
 import androidx.media3.common.Player
-import coil3.compose.AsyncImage
+import coil3.compose.SubcomposeAsyncImage
+import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.sticker.AlbumArtFallbackSticker
 import com.PolGrauDev.reproductor_nativo_android.data.AlbumArtRequest
 import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.sticker.StickerColors
 import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.sticker.StickerHardShadowBox
@@ -110,7 +111,7 @@ fun NowPlayingScreenSticker(viewModel: MusicViewModel, uiState: MusicUiState, on
                 borderWidth = 4.dp,
             ) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    AsyncImage(
+                    SubcomposeAsyncImage(
                         model = song?.contentUri?.let { AlbumArtRequest(it) },
                         contentDescription = null,
                         modifier = Modifier
@@ -119,6 +120,8 @@ fun NowPlayingScreenSticker(viewModel: MusicViewModel, uiState: MusicUiState, on
                             .clip(CircleShape)
                             .rotate(if (uiState.playback.isPlaying) angle else 0f),
                         contentScale = ContentScale.Crop,
+                        loading = { AlbumArtFallbackSticker() },
+                        error = { AlbumArtFallbackSticker() },
                     )
                 }
             }

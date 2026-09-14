@@ -44,7 +44,9 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import coil3.compose.AsyncImage
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil3.compose.SubcomposeAsyncImage
+import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.papel.AlbumArtFallbackPapel
 import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.AppStyle
 import com.PolGrauDev.reproductor_nativo_android.data.AlbumArtRequest
 import com.PolGrauDev.reproductor_nativo_android.data.model.AlbumGroup
@@ -118,9 +120,12 @@ fun LibraryScreenPapel(
     }
 
     songForPlaylistDialog?.let { song ->
+        val playlistIdsWithSong by remember(song.id) { viewModel.playlistIdsContainingSong(song.id) }
+            .collectAsStateWithLifecycle(initialValue = emptySet())
         AddToPlaylistDialog(
             appStyle = AppStyle.PAPEL,
             playlists = uiState.playlists,
+            playlistIdsWithSong = playlistIdsWithSong,
             onDismiss = { songForPlaylistDialog = null },
             onPlaylistSelected = { playlistId ->
                 viewModel.addSongToPlaylist(playlistId, song.id)
@@ -248,11 +253,13 @@ fun PapelSongRow(song: Song, isFavorite: Boolean, onClick: () -> Unit, onToggleF
             modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 20.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            AsyncImage(
+            SubcomposeAsyncImage(
                 model = AlbumArtRequest(song.contentUri),
                 contentDescription = null,
                 modifier = Modifier.size(44.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(2.dp)),
                 contentScale = ContentScale.Crop,
+                loading = { AlbumArtFallbackPapel() },
+                error = { AlbumArtFallbackPapel() },
             )
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
@@ -290,11 +297,13 @@ private fun PapelAlbumsTab(albums: List<AlbumGroup>, onClick: (AlbumGroup) -> Un
                     modifier = Modifier.fillMaxWidth().clickable { onClick(album) }.padding(horizontal = 20.dp, vertical = 14.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    AsyncImage(
+                    SubcomposeAsyncImage(
                         model = AlbumArtRequest(album.songs.first().contentUri),
                         contentDescription = null,
                         modifier = Modifier.size(44.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(2.dp)),
                         contentScale = ContentScale.Crop,
+                        loading = { AlbumArtFallbackPapel() },
+                        error = { AlbumArtFallbackPapel() },
                     )
                     Spacer(Modifier.width(14.dp))
                     Column(Modifier.weight(1f)) {

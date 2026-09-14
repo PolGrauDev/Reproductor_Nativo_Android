@@ -48,10 +48,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil3.compose.AsyncImage
+import coil3.compose.SubcomposeAsyncImage
+import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.papel.AlbumArtFallbackPapel
 import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.AppStyle
 import com.PolGrauDev.reproductor_nativo_android.data.AlbumArtRequest
 import com.PolGrauDev.reproductor_nativo_android.data.model.Song
+import com.PolGrauDev.reproductor_nativo_android.ui.components.AddSongsToPlaylistDialog
 import com.PolGrauDev.reproductor_nativo_android.ui.components.AddToPlaylistDialog
 import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.papel.PapelColors
 import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.papel.PapelRowDivider
@@ -88,11 +90,13 @@ fun AlbumDetailScreenPapel(viewModel: MusicViewModel, albumId: Long?, onBack: ()
             LazyColumn(Modifier.fillMaxSize()) {
                 item {
                     Column(Modifier.fillMaxWidth().padding(24.dp, 4.dp, 24.dp, 24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                        AsyncImage(
+                        SubcomposeAsyncImage(
                             model = AlbumArtRequest(album.songs.first().contentUri),
                             contentDescription = null,
                             modifier = Modifier.size(172.dp).clip(RoundedCornerShape(2.dp)),
                             contentScale = ContentScale.Crop,
+                            loading = { AlbumArtFallbackPapel() },
+                            error = { AlbumArtFallbackPapel() },
                         )
                         Spacer(Modifier.height(20.dp))
                         Text(album.title, style = PapelType.HeadlineLarge, maxLines = 2, textAlign = TextAlign.Center, color = PapelColors.OnSurface)
@@ -120,9 +124,12 @@ fun AlbumDetailScreenPapel(viewModel: MusicViewModel, albumId: Long?, onBack: ()
     }
 
     songForPlaylistDialog?.let { song ->
+        val playlistIdsWithSong by remember(song.id) { viewModel.playlistIdsContainingSong(song.id) }
+            .collectAsStateWithLifecycle(initialValue = emptySet())
         AddToPlaylistDialog(
             appStyle = AppStyle.PAPEL,
             playlists = uiState.playlists,
+            playlistIdsWithSong = playlistIdsWithSong,
             onDismiss = { songForPlaylistDialog = null },
             onPlaylistSelected = { playlistId -> viewModel.addSongToPlaylist(playlistId, song.id); songForPlaylistDialog = null },
             onCreatePlaylist = { name -> viewModel.createPlaylistAndAddSong(name, song.id); songForPlaylistDialog = null },
@@ -197,11 +204,13 @@ fun ArtistDetailScreenPapel(viewModel: MusicViewModel, artistId: Long?, onBack: 
                             }.padding(20.dp, 14.dp, 20.dp, 14.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            AsyncImage(
+                            SubcomposeAsyncImage(
                                 model = AlbumArtRequest(song.contentUri),
                                 contentDescription = null,
                                 modifier = Modifier.size(44.dp).clip(RoundedCornerShape(2.dp)),
                                 contentScale = ContentScale.Crop,
+                                loading = { AlbumArtFallbackPapel() },
+                                error = { AlbumArtFallbackPapel() },
                             )
                             Spacer(Modifier.width(14.dp))
                             Column(Modifier.weight(1f)) {
@@ -231,9 +240,12 @@ fun ArtistDetailScreenPapel(viewModel: MusicViewModel, artistId: Long?, onBack: 
     }
 
     songForPlaylistDialog?.let { song ->
+        val playlistIdsWithSong by remember(song.id) { viewModel.playlistIdsContainingSong(song.id) }
+            .collectAsStateWithLifecycle(initialValue = emptySet())
         AddToPlaylistDialog(
             appStyle = AppStyle.PAPEL,
             playlists = uiState.playlists,
+            playlistIdsWithSong = playlistIdsWithSong,
             onDismiss = { songForPlaylistDialog = null },
             onPlaylistSelected = { playlistId -> viewModel.addSongToPlaylist(playlistId, song.id); songForPlaylistDialog = null },
             onCreatePlaylist = { name -> viewModel.createPlaylistAndAddSong(name, song.id); songForPlaylistDialog = null },
@@ -284,9 +296,12 @@ fun FolderDetailScreenPapel(viewModel: MusicViewModel, folderPath: String, onBac
     }
 
     songForPlaylistDialog?.let { song ->
+        val playlistIdsWithSong by remember(song.id) { viewModel.playlistIdsContainingSong(song.id) }
+            .collectAsStateWithLifecycle(initialValue = emptySet())
         AddToPlaylistDialog(
             appStyle = AppStyle.PAPEL,
             playlists = uiState.playlists,
+            playlistIdsWithSong = playlistIdsWithSong,
             onDismiss = { songForPlaylistDialog = null },
             onPlaylistSelected = { playlistId -> viewModel.addSongToPlaylist(playlistId, song.id); songForPlaylistDialog = null },
             onCreatePlaylist = { name -> viewModel.createPlaylistAndAddSong(name, song.id); songForPlaylistDialog = null },
@@ -308,10 +323,18 @@ fun PlaylistDetailScreenPapel(
     val playlist = uiState.playlists.firstOrNull { it.id == playlistId }
     var showRenameDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
+    var showAddSongsDialog by remember { mutableStateOf(false) }
 
     Scaffold(containerColor = PapelColors.Background) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             PapelDetailTopBar(playlist?.name ?: "Playlist", onBack) {
+                Icon(
+                    Icons.Filled.Add,
+                    contentDescription = "Añadir canciones",
+                    tint = PapelColors.OnSurfaceVariant,
+                    modifier = Modifier.clickable { showAddSongsDialog = true }.padding(6.dp),
+                )
+                Spacer(Modifier.width(4.dp))
                 Icon(
                     Icons.Filled.Edit,
                     contentDescription = "Renombrar playlist",
@@ -341,11 +364,13 @@ fun PlaylistDetailScreenPapel(
                                 }.padding(20.dp, 12.dp, 20.dp, 12.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                AsyncImage(
+                                SubcomposeAsyncImage(
                                     model = AlbumArtRequest(song.contentUri),
                                     contentDescription = null,
                                     modifier = Modifier.size(40.dp).clip(RoundedCornerShape(2.dp)),
                                     contentScale = ContentScale.Crop,
+                                    loading = { AlbumArtFallbackPapel() },
+                                    error = { AlbumArtFallbackPapel() },
                                 )
                                 Spacer(Modifier.width(14.dp))
                                 Column(Modifier.weight(1f)) {
@@ -396,6 +421,19 @@ fun PlaylistDetailScreenPapel(
             playlistName = playlist?.name ?: "",
             onDismiss = { showDeleteDialog = false },
             onDelete = { viewModel.deletePlaylist(playlistId); showDeleteDialog = false; onPlaylistDeleted() },
+        )
+    }
+
+    if (showAddSongsDialog) {
+        AddSongsToPlaylistDialog(
+            appStyle = AppStyle.PAPEL,
+            allSongs = uiState.songs,
+            songIdsAlreadyInPlaylist = songs.map { it.id }.toSet(),
+            onDismiss = { showAddSongsDialog = false },
+            onAddSongs = { ids ->
+                ids.forEach { viewModel.addSongToPlaylist(playlistId, it) }
+                showAddSongsDialog = false
+            },
         )
     }
 }

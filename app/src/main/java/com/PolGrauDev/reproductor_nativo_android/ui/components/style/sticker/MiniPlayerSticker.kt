@@ -24,7 +24,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
-import coil3.compose.AsyncImage
+import coil3.compose.SubcomposeAsyncImage
+import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.sticker.AlbumArtFallbackSticker
 import com.PolGrauDev.reproductor_nativo_android.data.AlbumArtRequest
 import com.PolGrauDev.reproductor_nativo_android.data.model.Song
 import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.sticker.StickerColors
@@ -47,11 +48,13 @@ fun MiniPlayerSticker(song: Song, isPlaying: Boolean, onTogglePlayPause: () -> U
                 .padding(12.dp, 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            AsyncImage(
+            SubcomposeAsyncImage(
                 model = AlbumArtRequest(song.contentUri),
                 contentDescription = null,
                 modifier = Modifier.size(46.dp).clip(RoundedCornerShape(14.dp)),
                 contentScale = ContentScale.Crop,
+                loading = { AlbumArtFallbackSticker() },
+                error = { AlbumArtFallbackSticker() },
             )
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {

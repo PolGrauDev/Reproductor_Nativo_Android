@@ -48,10 +48,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil3.compose.AsyncImage
+import coil3.compose.SubcomposeAsyncImage
+import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.fanzine.AlbumArtFallbackFanzine
 import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.AppStyle
 import com.PolGrauDev.reproductor_nativo_android.data.AlbumArtRequest
 import com.PolGrauDev.reproductor_nativo_android.data.model.Song
+import com.PolGrauDev.reproductor_nativo_android.ui.components.AddSongsToPlaylistDialog
 import com.PolGrauDev.reproductor_nativo_android.ui.components.AddToPlaylistDialog
 import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.fanzine.FanzineColors
 import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.fanzine.FanzineFonts
@@ -98,11 +100,13 @@ fun AlbumDetailScreenFanzine(viewModel: MusicViewModel, albumId: Long?, onBack: 
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             item {
                 Column(Modifier.fillMaxWidth().padding(bottom = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    AsyncImage(
+                    SubcomposeAsyncImage(
                         model = AlbumArtRequest(album.songs.first().contentUri),
                         contentDescription = null,
                         modifier = Modifier.size(132.dp).rotate(-1.5f).border(2.dp, FanzineColors.Paper),
                         contentScale = ContentScale.Crop,
+                        loading = { AlbumArtFallbackFanzine() },
+                        error = { AlbumArtFallbackFanzine() },
                     )
                     Spacer(Modifier.height(14.dp))
                     Text(album.title.uppercase(), fontFamily = FanzineFonts.Anton, fontSize = 26.sp, color = FanzineColors.Paper, textAlign = TextAlign.Center, maxLines = 2)
@@ -125,9 +129,12 @@ fun AlbumDetailScreenFanzine(viewModel: MusicViewModel, albumId: Long?, onBack: 
     }
 
     songForPlaylistDialog?.let { song ->
+        val playlistIdsWithSong by remember(song.id) { viewModel.playlistIdsContainingSong(song.id) }
+            .collectAsStateWithLifecycle(initialValue = emptySet())
         AddToPlaylistDialog(
             appStyle = AppStyle.FANZINE,
             playlists = uiState.playlists,
+            playlistIdsWithSong = playlistIdsWithSong,
             onDismiss = { songForPlaylistDialog = null },
             onPlaylistSelected = { playlistId -> viewModel.addSongToPlaylist(playlistId, song.id); songForPlaylistDialog = null },
             onCreatePlaylist = { name -> viewModel.createPlaylistAndAddSong(name, song.id); songForPlaylistDialog = null },
@@ -189,7 +196,14 @@ fun ArtistDetailScreenFanzine(viewModel: MusicViewModel, artistId: Long?, onBack
                     modifier = Modifier.fillMaxWidth().rotate(fanzineTilt(index)).background(FanzineColors.Paper).clickable { viewModel.playSong(song, fromList = artist.songs); onSongClick() }.padding(11.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    AsyncImage(model = AlbumArtRequest(song.contentUri), contentDescription = null, modifier = Modifier.size(46.dp), contentScale = ContentScale.Crop)
+                    SubcomposeAsyncImage(
+                        model = AlbumArtRequest(song.contentUri),
+                        contentDescription = null,
+                        modifier = Modifier.size(46.dp),
+                        contentScale = ContentScale.Crop,
+                        loading = { AlbumArtFallbackFanzine() },
+                        error = { AlbumArtFallbackFanzine() },
+                    )
                     Spacer(Modifier.width(11.dp))
                     Column(Modifier.weight(1f)) {
                         Text(song.title.uppercase(), fontFamily = FanzineFonts.Anton, fontSize = 16.sp, color = FanzineColors.Ink, maxLines = 1)
@@ -209,9 +223,12 @@ fun ArtistDetailScreenFanzine(viewModel: MusicViewModel, artistId: Long?, onBack
     }
 
     songForPlaylistDialog?.let { song ->
+        val playlistIdsWithSong by remember(song.id) { viewModel.playlistIdsContainingSong(song.id) }
+            .collectAsStateWithLifecycle(initialValue = emptySet())
         AddToPlaylistDialog(
             appStyle = AppStyle.FANZINE,
             playlists = uiState.playlists,
+            playlistIdsWithSong = playlistIdsWithSong,
             onDismiss = { songForPlaylistDialog = null },
             onPlaylistSelected = { playlistId -> viewModel.addSongToPlaylist(playlistId, song.id); songForPlaylistDialog = null },
             onCreatePlaylist = { name -> viewModel.createPlaylistAndAddSong(name, song.id); songForPlaylistDialog = null },
@@ -253,9 +270,12 @@ fun FolderDetailScreenFanzine(viewModel: MusicViewModel, folderPath: String, onB
     }
 
     songForPlaylistDialog?.let { song ->
+        val playlistIdsWithSong by remember(song.id) { viewModel.playlistIdsContainingSong(song.id) }
+            .collectAsStateWithLifecycle(initialValue = emptySet())
         AddToPlaylistDialog(
             appStyle = AppStyle.FANZINE,
             playlists = uiState.playlists,
+            playlistIdsWithSong = playlistIdsWithSong,
             onDismiss = { songForPlaylistDialog = null },
             onPlaylistSelected = { playlistId -> viewModel.addSongToPlaylist(playlistId, song.id); songForPlaylistDialog = null },
             onCreatePlaylist = { name -> viewModel.createPlaylistAndAddSong(name, song.id); songForPlaylistDialog = null },
@@ -277,9 +297,11 @@ fun PlaylistDetailScreenFanzine(
     val playlist = uiState.playlists.firstOrNull { it.id == playlistId }
     var showRenameDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
+    var showAddSongsDialog by remember { mutableStateOf(false) }
 
     Column(Modifier.fillMaxSize().background(FanzineColors.Slate).photocopyGrain()) {
         FanzineDetailTopBar(playlist?.name ?: "Lista", onBack) {
+            Icon(Icons.Filled.Add, contentDescription = "Añadir canciones", tint = FanzineColors.Ink, modifier = Modifier.clickable { showAddSongsDialog = true }.padding(6.dp))
             Icon(Icons.Filled.Edit, contentDescription = "Renombrar playlist", tint = FanzineColors.Ink, modifier = Modifier.clickable { showRenameDialog = true }.padding(6.dp))
             Icon(Icons.Filled.Delete, contentDescription = "Borrar playlist", tint = FanzineColors.Ink, modifier = Modifier.clickable { showDeleteDialog = true }.padding(6.dp))
         }
@@ -294,7 +316,14 @@ fun PlaylistDetailScreenFanzine(
                         modifier = Modifier.fillMaxWidth().rotate(fanzineTilt(index)).background(FanzineColors.Paper).clickable { viewModel.playSong(song, fromList = songs); onSongClick() }.padding(10.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        AsyncImage(model = AlbumArtRequest(song.contentUri), contentDescription = null, modifier = Modifier.size(40.dp), contentScale = ContentScale.Crop)
+                        SubcomposeAsyncImage(
+                            model = AlbumArtRequest(song.contentUri),
+                            contentDescription = null,
+                            modifier = Modifier.size(40.dp),
+                            contentScale = ContentScale.Crop,
+                            loading = { AlbumArtFallbackFanzine() },
+                            error = { AlbumArtFallbackFanzine() },
+                        )
                         Spacer(Modifier.width(11.dp))
                         Column(Modifier.weight(1f)) {
                             Text(song.title.uppercase(), fontFamily = FanzineFonts.Anton, fontSize = 15.sp, color = FanzineColors.Ink, maxLines = 1)
@@ -337,6 +366,19 @@ fun PlaylistDetailScreenFanzine(
             playlistName = playlist?.name ?: "",
             onDismiss = { showDeleteDialog = false },
             onDelete = { viewModel.deletePlaylist(playlistId); showDeleteDialog = false; onPlaylistDeleted() },
+        )
+    }
+
+    if (showAddSongsDialog) {
+        AddSongsToPlaylistDialog(
+            appStyle = AppStyle.FANZINE,
+            allSongs = uiState.songs,
+            songIdsAlreadyInPlaylist = songs.map { it.id }.toSet(),
+            onDismiss = { showAddSongsDialog = false },
+            onAddSongs = { ids ->
+                ids.forEach { viewModel.addSongToPlaylist(playlistId, it) }
+                showAddSongsDialog = false
+            },
         )
     }
 }

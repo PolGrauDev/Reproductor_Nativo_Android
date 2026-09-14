@@ -37,7 +37,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil3.compose.AsyncImage
+import coil3.compose.SubcomposeAsyncImage
+import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.sticker.AlbumArtFallbackSticker
 import com.PolGrauDev.reproductor_nativo_android.data.AlbumArtRequest
 import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.sticker.StickerColors
 import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.sticker.StickerHardShadowBox
@@ -84,7 +85,14 @@ fun QueueScreenSticker(viewModel: MusicViewModel, onBack: () -> Unit) {
                         modifier = Modifier.fillMaxWidth().clickable { viewModel.playQueueItem(song.id.toString()) }.padding(9.dp, 9.dp, 6.dp, 9.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        AsyncImage(model = AlbumArtRequest(song.contentUri), contentDescription = null, modifier = Modifier.size(40.dp).clip(RoundedCornerShape(13.dp)), contentScale = ContentScale.Crop)
+                        SubcomposeAsyncImage(
+                            model = AlbumArtRequest(song.contentUri),
+                            contentDescription = null,
+                            modifier = Modifier.size(40.dp).clip(RoundedCornerShape(13.dp)),
+                            contentScale = ContentScale.Crop,
+                            loading = { AlbumArtFallbackSticker() },
+                            error = { AlbumArtFallbackSticker() },
+                        )
                         Spacer(Modifier.width(10.dp))
                         Column(Modifier.weight(1f)) {
                             Text(song.title, style = StickerType.TitleMedium.let { it.copy(fontSize = 16.sp) }, color = if (isCurrent) Color.White else StickerColors.Ink, maxLines = 1)

@@ -32,6 +32,9 @@ class PlaylistRepository(
 
     fun observeSongIds(playlistId: Long): Flow<List<Long>> = playlistDao.observeSongIds(playlistId)
 
+    fun observePlaylistIdsContainingSong(songId: Long): Flow<List<Long>> =
+        playlistDao.observePlaylistIdsForSong(songId)
+
     suspend fun addSongToPlaylist(playlistId: Long, songId: Long) {
         val position = playlistDao.nextPosition(playlistId)
         playlistDao.addSong(PlaylistSongCrossRef(playlistId, songId, position))

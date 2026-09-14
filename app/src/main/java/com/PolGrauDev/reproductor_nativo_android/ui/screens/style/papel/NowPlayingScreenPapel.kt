@@ -56,7 +56,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.Player
-import coil3.compose.AsyncImage
+import coil3.compose.SubcomposeAsyncImage
+import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.papel.AlbumArtFallbackPapel
 import com.PolGrauDev.reproductor_nativo_android.data.AlbumArtRequest
 import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.papel.PapelColors
 import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.papel.PapelSectionLabel
@@ -112,7 +113,7 @@ fun NowPlayingScreenPapel(viewModel: MusicViewModel, uiState: MusicUiState, onBa
                     modifier = Modifier.fillMaxWidth(0.7f).aspectRatio(1f).background(PapelColors.SurfaceVariant, CircleShape),
                     contentAlignment = Alignment.Center,
                 ) {
-                    AsyncImage(
+                    SubcomposeAsyncImage(
                         model = song?.contentUri?.let { AlbumArtRequest(it) },
                         contentDescription = null,
                         modifier = Modifier
@@ -121,6 +122,8 @@ fun NowPlayingScreenPapel(viewModel: MusicViewModel, uiState: MusicUiState, onBa
                             .clip(CircleShape)
                             .rotate(if (uiState.playback.isPlaying) angle else 0f),
                         contentScale = ContentScale.Crop,
+                        loading = { AlbumArtFallbackPapel() },
+                        error = { AlbumArtFallbackPapel() },
                     )
                 }
 

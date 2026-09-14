@@ -34,7 +34,8 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil3.compose.AsyncImage
+import coil3.compose.SubcomposeAsyncImage
+import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.papel.AlbumArtFallbackPapel
 import com.PolGrauDev.reproductor_nativo_android.data.AlbumArtRequest
 import com.PolGrauDev.reproductor_nativo_android.data.model.Song
 import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.papel.PapelColors
@@ -143,11 +144,13 @@ private fun PapelQueueRow(
                 .padding(20.dp, 14.dp, 20.dp, 14.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            AsyncImage(
+            SubcomposeAsyncImage(
                 model = AlbumArtRequest(song.contentUri),
                 contentDescription = null,
                 modifier = Modifier.size(40.dp).clip(RoundedCornerShape(2.dp)),
                 contentScale = ContentScale.Crop,
+                loading = { AlbumArtFallbackPapel() },
+                error = { AlbumArtFallbackPapel() },
             )
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {

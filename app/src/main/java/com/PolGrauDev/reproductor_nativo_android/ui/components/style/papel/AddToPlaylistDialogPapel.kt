@@ -33,6 +33,7 @@ import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.papel.PapelType
 @Composable
 fun AddToPlaylistDialogPapel(
     playlists: List<PlaylistSummary>,
+    playlistIdsWithSong: Set<Long>,
     onDismiss: () -> Unit,
     onPlaylistSelected: (playlistId: Long) -> Unit,
     onCreatePlaylist: (name: String) -> Unit,
@@ -49,12 +50,24 @@ fun AddToPlaylistDialogPapel(
             } else {
                 LazyColumn(Modifier.heightIn(max = 240.dp)) {
                     items(playlists, key = { it.id }) { playlist ->
+                        val alreadyAdded = playlist.id in playlistIdsWithSong
                         Column {
                             Row(
-                                modifier = Modifier.fillMaxWidth().clickable { onPlaylistSelected(playlist.id) }.padding(vertical = 13.dp),
+                                modifier = Modifier.fillMaxWidth()
+                                    .clickable(enabled = !alreadyAdded) { onPlaylistSelected(playlist.id) }
+                                    .padding(vertical = 13.dp),
                             ) {
-                                Text(playlist.name, style = PapelType.TitleMedium, color = PapelColors.OnSurface, modifier = Modifier.weight(1f))
-                                Text("${playlist.songCount}", style = PapelType.Mono, color = PapelColors.OnSurfaceVariant)
+                                Text(
+                                    playlist.name,
+                                    style = PapelType.TitleMedium,
+                                    color = if (alreadyAdded) PapelColors.Faint else PapelColors.OnSurface,
+                                    modifier = Modifier.weight(1f),
+                                )
+                                Text(
+                                    if (alreadyAdded) "Ya está" else "${playlist.songCount}",
+                                    style = PapelType.Mono,
+                                    color = PapelColors.OnSurfaceVariant,
+                                )
                             }
                             PapelRowDivider()
                         }

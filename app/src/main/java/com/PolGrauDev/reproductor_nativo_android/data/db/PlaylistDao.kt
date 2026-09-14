@@ -2,6 +2,7 @@ package com.PolGrauDev.reproductor_nativo_android.data.db
 
 import androidx.room.Dao
 import androidx.room.Insert
+import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
 import com.PolGrauDev.reproductor_nativo_android.data.model.PlaylistSummary
@@ -38,8 +39,14 @@ interface PlaylistDao {
     @Query("SELECT COALESCE(MAX(position), -1) + 1 FROM playlist_song_cross_ref WHERE playlistId = :playlistId")
     suspend fun nextPosition(playlistId: Long): Int
 
-    @Insert
+    /** IGNORE en vez de ABORT: la clave primaria compuesta (playlistId, songId) rechazaría con
+     * un SQLiteConstraintException si la canción ya está en la playlist — con IGNORE el intento
+     * de duplicado simplemente no hace nada, en vez de crashear la app. */
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun addSong(ref: PlaylistSongCrossRef)
+
+    @Query("SELECT playlistId FROM playlist_song_cross_ref WHERE songId = :songId")
+    fun observePlaylistIdsForSong(songId: Long): Flow<List<Long>>
 
     @Query("DELETE FROM playlist_song_cross_ref WHERE playlistId = :playlistId AND songId = :songId")
     suspend fun removeSong(playlistId: Long, songId: Long)

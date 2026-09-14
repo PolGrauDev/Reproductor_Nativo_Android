@@ -22,7 +22,8 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil3.compose.AsyncImage
+import coil3.compose.SubcomposeAsyncImage
+import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.fanzine.AlbumArtFallbackFanzine
 import com.PolGrauDev.reproductor_nativo_android.data.AlbumArtRequest
 import com.PolGrauDev.reproductor_nativo_android.data.model.Song
 import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.fanzine.FanzineColors
@@ -40,11 +41,13 @@ fun MiniPlayerFanzine(song: Song, isPlaying: Boolean, onTogglePlayPause: () -> U
                 .padding(12.dp, 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            AsyncImage(
+            SubcomposeAsyncImage(
                 model = AlbumArtRequest(song.contentUri),
                 contentDescription = null,
                 modifier = Modifier.size(46.dp),
                 contentScale = ContentScale.Crop,
+                loading = { AlbumArtFallbackFanzine() },
+                error = { AlbumArtFallbackFanzine() },
             )
             Spacer(Modifier.width(11.dp))
             Column(Modifier.weight(1f)) {

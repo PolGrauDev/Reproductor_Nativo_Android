@@ -32,7 +32,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil3.compose.AsyncImage
+import coil3.compose.SubcomposeAsyncImage
+import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.sticker.AlbumArtFallbackSticker
 import com.PolGrauDev.reproductor_nativo_android.data.AlbumArtRequest
 import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.sticker.StickerColors
 import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.sticker.StickerHardShadowBox
@@ -78,7 +79,14 @@ fun FavoritesScreenSticker(viewModel: MusicViewModel, onBack: () -> Unit, onSong
                                 modifier = Modifier.fillMaxWidth().clickable { viewModel.playSong(song, fromList = favorites); onSongClick() }.padding(9.dp, 9.dp, 12.dp, 9.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                AsyncImage(model = AlbumArtRequest(song.contentUri), contentDescription = null, modifier = Modifier.size(50.dp).clip(RoundedCornerShape(15.dp)), contentScale = ContentScale.Crop)
+                                SubcomposeAsyncImage(
+                                    model = AlbumArtRequest(song.contentUri),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(50.dp).clip(RoundedCornerShape(15.dp)),
+                                    contentScale = ContentScale.Crop,
+                                    loading = { AlbumArtFallbackSticker() },
+                                    error = { AlbumArtFallbackSticker() },
+                                )
                                 Spacer(Modifier.width(12.dp))
                                 Column(Modifier.weight(1f)) {
                                     Text(song.title, style = StickerType.TitleMedium, color = StickerColors.Ink, maxLines = 1)

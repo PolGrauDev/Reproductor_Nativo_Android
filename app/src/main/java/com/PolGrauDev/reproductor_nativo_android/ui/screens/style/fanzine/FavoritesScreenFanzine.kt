@@ -29,7 +29,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil3.compose.AsyncImage
+import coil3.compose.SubcomposeAsyncImage
+import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.fanzine.AlbumArtFallbackFanzine
 import com.PolGrauDev.reproductor_nativo_android.data.AlbumArtRequest
 import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.fanzine.FanzineColors
 import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.fanzine.FanzineFonts
@@ -80,7 +81,14 @@ fun FavoritesScreenFanzine(viewModel: MusicViewModel, onBack: () -> Unit, onSong
                             .padding(11.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        AsyncImage(model = AlbumArtRequest(song.contentUri), contentDescription = null, modifier = Modifier.size(46.dp), contentScale = ContentScale.Crop)
+                        SubcomposeAsyncImage(
+                            model = AlbumArtRequest(song.contentUri),
+                            contentDescription = null,
+                            modifier = Modifier.size(46.dp),
+                            contentScale = ContentScale.Crop,
+                            loading = { AlbumArtFallbackFanzine() },
+                            error = { AlbumArtFallbackFanzine() },
+                        )
                         Spacer(Modifier.width(11.dp))
                         Column(Modifier.weight(1f)) {
                             Text(song.title.uppercase(), fontFamily = FanzineFonts.Anton, fontSize = 16.sp, color = FanzineColors.Ink, maxLines = 1)

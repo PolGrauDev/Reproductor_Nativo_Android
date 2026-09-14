@@ -53,7 +53,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.unit.sp
 import androidx.media3.common.Player
-import coil3.compose.AsyncImage
+import coil3.compose.SubcomposeAsyncImage
+import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.fanzine.AlbumArtFallbackFanzine
 import com.PolGrauDev.reproductor_nativo_android.data.AlbumArtRequest
 import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.fanzine.FanzineColors
 import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.fanzine.FanzineFonts
@@ -113,7 +114,7 @@ fun NowPlayingScreenFanzine(viewModel: MusicViewModel, uiState: MusicUiState, on
                         .aspectRatio(1f)
                         .background(FanzineColors.Grime, CircleShape),
                 )
-                AsyncImage(
+                SubcomposeAsyncImage(
                     model = song?.contentUri?.let { AlbumArtRequest(it) },
                     contentDescription = null,
                     modifier = Modifier
@@ -122,6 +123,8 @@ fun NowPlayingScreenFanzine(viewModel: MusicViewModel, uiState: MusicUiState, on
                         .clip(CircleShape)
                         .rotate(if (uiState.playback.isPlaying) angle else 0f),
                     contentScale = ContentScale.Crop,
+                    loading = { AlbumArtFallbackFanzine() },
+                    error = { AlbumArtFallbackFanzine() },
                 )
                 Text(
                     "A TODO VOLUMEN",

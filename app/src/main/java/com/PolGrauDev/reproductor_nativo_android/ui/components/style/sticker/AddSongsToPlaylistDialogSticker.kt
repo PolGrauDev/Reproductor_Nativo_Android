@@ -10,15 +10,17 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
-import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.RadioButtonUnchecked
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -33,20 +35,26 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import com.PolGrauDev.reproductor_nativo_android.data.model.PlaylistSummary
+import com.PolGrauDev.reproductor_nativo_android.data.model.Song
 import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.sticker.StickerColors
 import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.sticker.StickerHardShadowBox
 import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.sticker.StickerType
 
 @Composable
-fun AddToPlaylistDialogSticker(
-    playlists: List<PlaylistSummary>,
-    playlistIdsWithSong: Set<Long>,
+fun AddSongsToPlaylistDialogSticker(
+    allSongs: List<Song>,
+    songIdsAlreadyInPlaylist: Set<Long>,
     onDismiss: () -> Unit,
-    onPlaylistSelected: (playlistId: Long) -> Unit,
-    onCreatePlaylist: (name: String) -> Unit,
+    onAddSongs: (Set<Long>) -> Unit,
 ) {
-    var newPlaylistName by remember { mutableStateOf("") }
+    var query by remember { mutableStateOf("") }
+    var selected by remember { mutableStateOf(setOf<Long>()) }
+    val visible = remember(allSongs, songIdsAlreadyInPlaylist, query) {
+        allSongs.filter {
+            it.id !in songIdsAlreadyInPlaylist &&
+                (query.isBlank() || it.title.contains(query, ignoreCase = true) || it.artist.contains(query, ignoreCase = true))
+        }.sortedBy { it.title }
+    }
 
     Dialog(onDismissRequest = onDismiss) {
         StickerHardShadowBox(shape = RoundedCornerShape(26.dp), borderWidth = 4.dp, shadowOffsetX = 7.dp, shadowOffsetY = 7.dp) {
@@ -57,58 +65,57 @@ fun AddToPlaylistDialogSticker(
                 ) {
                     Icon(Icons.AutoMirrored.Filled.PlaylistAdd, contentDescription = null, tint = StickerColors.Ink)
                     Spacer(Modifier.width(9.dp))
-                    Text("¿A qué lista?", style = StickerType.TitleMedium.let { it.copy(fontSize = 20.sp) }, color = StickerColors.Ink)
+                    Text("Añadir canciones", style = StickerType.TitleMedium.let { it.copy(fontSize = 20.sp) }, color = StickerColors.Ink)
                 }
                 Column(Modifier.padding(16.dp)) {
-                    if (playlists.isEmpty()) {
-                        Text("Todavía no tienes playlists", style = StickerType.HandwrittenSmall, color = StickerColors.Faded)
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Filled.Search, contentDescription = null, tint = StickerColors.Pink)
+                        Spacer(Modifier.width(10.dp))
+                        Box(Modifier.weight(1f)) {
+                            if (query.isEmpty()) {
+                                Text("busca lo que te apetezca…", style = StickerType.HandwrittenSmall, color = StickerColors.Faded)
+                            }
+                            BasicTextField(
+                                value = query,
+                                onValueChange = { query = it },
+                                singleLine = true,
+                                textStyle = StickerType.HandwrittenSmall.copy(color = StickerColors.Ink),
+                                cursorBrush = SolidColor(StickerColors.Ink),
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(10.dp))
+                    if (visible.isEmpty()) {
+                        Text("No hay canciones para añadir", style = StickerType.HandwrittenSmall, color = StickerColors.Faded)
                     } else {
-                        LazyColumn(Modifier.heightIn(max = 220.dp)) {
-                            items(playlists, key = { it.id }) { playlist ->
-                                val alreadyAdded = playlist.id in playlistIdsWithSong
+                        LazyColumn(Modifier.heightIn(max = 260.dp)) {
+                            items(visible, key = { it.id }) { song ->
+                                val isSelected = song.id in selected
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .background(StickerColors.Paper, RoundedCornerShape(16.dp))
-                                        .clickable(enabled = !alreadyAdded) { onPlaylistSelected(playlist.id) }
+                                        .clickable { selected = if (isSelected) selected - song.id else selected + song.id }
                                         .padding(12.dp, 9.dp)
                                         .padding(bottom = 9.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) {
-                                    Text(
-                                        playlist.name,
-                                        style = StickerType.TitleMedium,
-                                        color = if (alreadyAdded) StickerColors.Faded else StickerColors.Ink,
-                                        modifier = Modifier.weight(1f),
-                                    )
-                                    if (alreadyAdded) {
-                                        Icon(Icons.Filled.Check, contentDescription = "Ya está en esta lista", tint = StickerColors.Faded)
-                                    } else {
-                                        Box(
-                                            Modifier
-                                                .background(StickerColors.Butter, RoundedCornerShape(11.dp))
-                                                .padding(horizontal = 9.dp, vertical = 2.dp),
-                                        ) { Text("${playlist.songCount}", style = StickerType.HandwrittenSmall, color = StickerColors.Ink) }
+                                    Column(Modifier.weight(1f)) {
+                                        Text(song.title, style = StickerType.TitleMedium, color = StickerColors.Ink, maxLines = 1)
+                                        Text(song.artist, style = StickerType.HandwrittenSmall, color = StickerColors.Faded, maxLines = 1)
                                     }
+                                    Icon(
+                                        if (isSelected) Icons.Filled.CheckCircle else Icons.Filled.RadioButtonUnchecked,
+                                        contentDescription = null,
+                                        tint = if (isSelected) StickerColors.Pink else StickerColors.Faded,
+                                    )
                                 }
                                 Spacer(Modifier.height(9.dp))
                             }
                         }
                     }
                     Spacer(Modifier.height(6.dp))
-                    Text("o crea una lista nueva ✎", style = StickerType.HandwrittenSmall, color = StickerColors.Faded)
-                    Spacer(Modifier.height(6.dp))
-                    Box(Modifier.background(Color.White, RoundedCornerShape(16.dp)).fillMaxWidth().padding(12.dp, 10.dp)) {
-                        BasicTextField(
-                            value = newPlaylistName,
-                            onValueChange = { newPlaylistName = it },
-                            singleLine = true,
-                            textStyle = StickerType.HandwrittenSmall.copy(color = StickerColors.Ink),
-                            cursorBrush = SolidColor(StickerColors.Ink),
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                    }
-                    Spacer(Modifier.height(16.dp))
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                         StickerHardShadowBox(shape = RoundedCornerShape(15.dp)) {
                             Text(
@@ -121,14 +128,11 @@ fun AddToPlaylistDialogSticker(
                         Spacer(Modifier.width(9.dp))
                         StickerHardShadowBox(shape = RoundedCornerShape(15.dp), backgroundColor = StickerColors.Pink) {
                             Text(
-                                "crear y añadir",
+                                "añadir (${selected.size})",
                                 style = StickerType.TitleMedium.let { it.copy(fontSize = 15.sp) },
                                 color = Color.White,
                                 modifier = Modifier
-                                    .clickable(enabled = newPlaylistName.isNotBlank()) {
-                                        onCreatePlaylist(newPlaylistName)
-                                        newPlaylistName = ""
-                                    }
+                                    .clickable(enabled = selected.isNotEmpty()) { onAddSongs(selected) }
                                     .padding(13.dp, 8.dp),
                             )
                         }

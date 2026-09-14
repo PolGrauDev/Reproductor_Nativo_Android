@@ -46,7 +46,9 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import coil3.compose.AsyncImage
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil3.compose.SubcomposeAsyncImage
+import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.sticker.AlbumArtFallbackSticker
 import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.AppStyle
 import com.PolGrauDev.reproductor_nativo_android.data.AlbumArtRequest
 import com.PolGrauDev.reproductor_nativo_android.data.model.AlbumGroup
@@ -115,9 +117,12 @@ fun LibraryScreenSticker(
     }
 
     songForPlaylistDialog?.let { song ->
+        val playlistIdsWithSong by remember(song.id) { viewModel.playlistIdsContainingSong(song.id) }
+            .collectAsStateWithLifecycle(initialValue = emptySet())
         AddToPlaylistDialog(
             appStyle = AppStyle.STICKERS,
             playlists = uiState.playlists,
+            playlistIdsWithSong = playlistIdsWithSong,
             onDismiss = { songForPlaylistDialog = null },
             onPlaylistSelected = { playlistId ->
                 viewModel.addSongToPlaylist(playlistId, song.id)
@@ -256,11 +261,13 @@ fun StickerSongRow(song: Song, isFavorite: Boolean, tilt: Float, onClick: () -> 
             modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(9.dp, 9.dp, 12.dp, 9.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            AsyncImage(
+            SubcomposeAsyncImage(
                 model = AlbumArtRequest(song.contentUri),
                 contentDescription = null,
                 modifier = Modifier.size(50.dp).clip(RoundedCornerShape(14.dp)),
                 contentScale = ContentScale.Crop,
+                loading = { AlbumArtFallbackSticker() },
+                error = { AlbumArtFallbackSticker() },
             )
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
@@ -302,11 +309,13 @@ private fun StickerAlbumsTab(albums: List<AlbumGroup>, onClick: (AlbumGroup) -> 
                     modifier = Modifier.fillMaxWidth().clickable { onClick(album) }.padding(9.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    AsyncImage(
+                    SubcomposeAsyncImage(
                         model = AlbumArtRequest(album.songs.first().contentUri),
                         contentDescription = null,
                         modifier = Modifier.size(50.dp).clip(RoundedCornerShape(14.dp)),
                         contentScale = ContentScale.Crop,
+                        loading = { AlbumArtFallbackSticker() },
+                        error = { AlbumArtFallbackSticker() },
                     )
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
