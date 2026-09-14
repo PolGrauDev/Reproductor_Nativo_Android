@@ -23,7 +23,7 @@ class PlaybackService : MediaSessionService() {
     override fun onCreate() {
         super.onCreate()
 
-        val player = ExoPlayer.Builder(this).build()
+        val player = ExoPlayer.Builder(this).setHandleAudioBecomingNoisy(true).build()
         player.addListener(object : Player.Listener {
             override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) {
                 mediaSession?.setMediaButtonPreferences(buildMediaButtonPreferences(player))
