@@ -3,6 +3,7 @@ package com.PolGrauDev.reproductor_nativo_android.ui.screens.style.fanzine
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -324,50 +325,59 @@ fun PlaylistDetailScreenFanzine(
             ) {
                 itemsIndexed(dragState.songs, key = { _, song -> song.id }) { index, song ->
                     ReorderableItem(dragState.reorderableState, key = song.id) { isDragging ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth()
+                        val rowInteractionSource = remember { MutableInteractionSource() }
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
                                 .rotate(fanzineTilt(index))
-                                .background(FanzineColors.Paper)
-                                .alpha(if (isDragging) 0.85f else 1f)
-                                .longPressDraggableHandle(
-                                    onDragStarted = { dragState.onDragStarted(song) },
-                                    onDragStopped = { dragState.onDragStopped() },
-                                )
-                                .clickable { viewModel.playSong(song, fromList = songs); onSongClick() }
-                                .padding(10.dp),
-                            verticalAlignment = Alignment.CenterVertically,
+                                .alpha(if (isDragging) 0.85f else 1f),
                         ) {
-                            SubcomposeAsyncImage(
-                                model = AlbumArtRequest(song.contentUri),
-                                contentDescription = null,
-                                modifier = Modifier.size(40.dp),
-                                contentScale = ContentScale.Crop,
-                                loading = { AlbumArtFallbackFanzine() },
-                                error = { AlbumArtFallbackFanzine() },
-                            )
-                            Spacer(Modifier.width(11.dp))
-                            Column(Modifier.weight(1f)) {
-                                Text(song.title.uppercase(), fontFamily = FanzineFonts.Anton, fontSize = 15.sp, color = FanzineColors.Ink, maxLines = 1)
-                                Text(song.artist, fontFamily = FanzineFonts.SpecialElite, fontSize = 12.sp, color = FanzineColors.Grime, maxLines = 1)
+                            Row(
+                                modifier = Modifier.fillMaxWidth()
+                                    .background(FanzineColors.Paper)
+                                    .longPressDraggableHandle(
+                                        onDragStarted = { dragState.onDragStarted(song) },
+                                        onDragStopped = { dragState.onDragStopped() },
+                                    )
+                                    .clickable(interactionSource = rowInteractionSource, indication = null) {
+                                        viewModel.playSong(song, fromList = songs)
+                                        onSongClick()
+                                    }
+                                    .padding(10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                SubcomposeAsyncImage(
+                                    model = AlbumArtRequest(song.contentUri),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(40.dp),
+                                    contentScale = ContentScale.Crop,
+                                    loading = { AlbumArtFallbackFanzine() },
+                                    error = { AlbumArtFallbackFanzine() },
+                                )
+                                Spacer(Modifier.width(11.dp))
+                                Column(Modifier.weight(1f)) {
+                                    Text(song.title.uppercase(), fontFamily = FanzineFonts.Anton, fontSize = 15.sp, color = FanzineColors.Ink, maxLines = 1)
+                                    Text(song.artist, fontFamily = FanzineFonts.SpecialElite, fontSize = 12.sp, color = FanzineColors.Grime, maxLines = 1)
+                                }
+                                Icon(
+                                    Icons.Filled.KeyboardArrowUp,
+                                    contentDescription = "Subir",
+                                    tint = if (index > 0) FanzineColors.Ink else FanzineColors.Faded,
+                                    modifier = Modifier.clickable(enabled = index > 0) { viewModel.moveSongInPlaylist(playlistId, songs.map { it.id }, index, index - 1) }.padding(4.dp),
+                                )
+                                Icon(
+                                    Icons.Filled.KeyboardArrowDown,
+                                    contentDescription = "Bajar",
+                                    tint = if (index < songs.lastIndex) FanzineColors.Ink else FanzineColors.Faded,
+                                    modifier = Modifier.clickable(enabled = index < songs.lastIndex) { viewModel.moveSongInPlaylist(playlistId, songs.map { it.id }, index, index + 1) }.padding(4.dp),
+                                )
+                                Icon(
+                                    Icons.Filled.Close,
+                                    contentDescription = "Quitar de la playlist",
+                                    tint = FanzineColors.Red,
+                                    modifier = Modifier.clickable { viewModel.removeSongFromPlaylist(playlistId, song.id) }.padding(4.dp),
+                                )
                             }
-                            Icon(
-                                Icons.Filled.KeyboardArrowUp,
-                                contentDescription = "Subir",
-                                tint = if (index > 0) FanzineColors.Ink else FanzineColors.Faded,
-                                modifier = Modifier.clickable(enabled = index > 0) { viewModel.moveSongInPlaylist(playlistId, songs.map { it.id }, index, index - 1) }.padding(4.dp),
-                            )
-                            Icon(
-                                Icons.Filled.KeyboardArrowDown,
-                                contentDescription = "Bajar",
-                                tint = if (index < songs.lastIndex) FanzineColors.Ink else FanzineColors.Faded,
-                                modifier = Modifier.clickable(enabled = index < songs.lastIndex) { viewModel.moveSongInPlaylist(playlistId, songs.map { it.id }, index, index + 1) }.padding(4.dp),
-                            )
-                            Icon(
-                                Icons.Filled.Close,
-                                contentDescription = "Quitar de la playlist",
-                                tint = FanzineColors.Red,
-                                modifier = Modifier.clickable { viewModel.removeSongFromPlaylist(playlistId, song.id) }.padding(4.dp),
-                            )
                         }
                     }
                 }

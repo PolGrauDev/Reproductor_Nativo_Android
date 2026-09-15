@@ -2,12 +2,16 @@ package com.PolGrauDev.reproductor_nativo_android.ui.screens.style.papel
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -76,8 +80,9 @@ private fun PapelDetailTopBar(title: String, onBack: () -> Unit, actions: @Compo
             style = PapelType.SectionLabel,
             color = PapelColors.Accent,
             maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f),
+            softWrap = false,
+            overflow = TextOverflow.Clip,
+            modifier = Modifier.weight(1f).horizontalScroll(rememberScrollState()),
         )
         actions()
     }
@@ -89,7 +94,7 @@ fun AlbumDetailScreenPapel(viewModel: MusicViewModel, albumId: Long?, onBack: ()
     val album = uiState.albums.firstOrNull { it.albumId == albumId }
     var songForPlaylistDialog by remember { mutableStateOf<Song?>(null) }
 
-    Scaffold(containerColor = PapelColors.Background) { padding ->
+    Scaffold(containerColor = PapelColors.Background, contentWindowInsets = WindowInsets(0, 0, 0, 0)) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             PapelDetailTopBar("Álbum", onBack)
             if (album == null) {
@@ -110,7 +115,16 @@ fun AlbumDetailScreenPapel(viewModel: MusicViewModel, albumId: Long?, onBack: ()
                             error = { AlbumArtFallbackPapel() },
                         )
                         Spacer(Modifier.height(20.dp))
-                        Text(album.title, style = PapelType.HeadlineLarge, maxLines = 2, textAlign = TextAlign.Center, color = PapelColors.OnSurface)
+                        Text(
+                            album.title,
+                            style = PapelType.HeadlineLarge,
+                            maxLines = 1,
+                            softWrap = false,
+                            overflow = TextOverflow.Clip,
+                            textAlign = TextAlign.Center,
+                            color = PapelColors.OnSurface,
+                            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                        )
                         Text(
                             "${album.artist} · ${album.songs.size} canciones",
                             style = PapelType.SectionLabel,
@@ -196,7 +210,7 @@ fun ArtistDetailScreenPapel(viewModel: MusicViewModel, artistId: Long?, onBack: 
     val artist = uiState.artists.firstOrNull { it.artistId == artistId }
     var songForPlaylistDialog by remember { mutableStateOf<Song?>(null) }
 
-    Scaffold(containerColor = PapelColors.Background) { padding ->
+    Scaffold(containerColor = PapelColors.Background, contentWindowInsets = WindowInsets(0, 0, 0, 0)) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             PapelDetailTopBar(artist?.name ?: "Artista", onBack)
             if (artist == null) {
@@ -270,7 +284,7 @@ fun FolderDetailScreenPapel(viewModel: MusicViewModel, folderPath: String, onBac
     val folder = uiState.folders.firstOrNull { it.path == folderPath }
     var songForPlaylistDialog by remember { mutableStateOf<Song?>(null) }
 
-    Scaffold(containerColor = PapelColors.Background) { padding ->
+    Scaffold(containerColor = PapelColors.Background, contentWindowInsets = WindowInsets(0, 0, 0, 0)) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             PapelDetailTopBar("Carpeta", onBack)
             if (folder == null) {
@@ -282,7 +296,15 @@ fun FolderDetailScreenPapel(viewModel: MusicViewModel, folderPath: String, onBac
             LazyColumn(Modifier.fillMaxSize()) {
                 item {
                     Column(Modifier.fillMaxWidth().padding(20.dp, 8.dp, 20.dp, 16.dp)) {
-                        Text(folder.name, style = PapelType.HeadlineLarge, maxLines = 2, color = PapelColors.OnSurface)
+                        Text(
+                            folder.name,
+                            style = PapelType.HeadlineLarge,
+                            maxLines = 1,
+                            softWrap = false,
+                            overflow = TextOverflow.Clip,
+                            color = PapelColors.OnSurface,
+                            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                        )
                         Text(
                             "${folder.songs.size} canciones",
                             style = PapelType.SectionLabel,
@@ -336,7 +358,7 @@ fun PlaylistDetailScreenPapel(
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showAddSongsDialog by remember { mutableStateOf(false) }
 
-    Scaffold(containerColor = PapelColors.Background) { padding ->
+    Scaffold(containerColor = PapelColors.Background, contentWindowInsets = WindowInsets(0, 0, 0, 0)) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             PapelDetailTopBar(playlist?.name ?: "Playlist", onBack) {
                 Icon(
@@ -371,6 +393,7 @@ fun PlaylistDetailScreenPapel(
                 LazyColumn(Modifier.fillMaxSize(), state = dragState.lazyListState) {
                     itemsIndexed(dragState.songs, key = { _, song -> song.id }) { index, song ->
                         ReorderableItem(dragState.reorderableState, key = song.id) { isDragging ->
+                            val rowInteractionSource = remember { MutableInteractionSource() }
                             Column(Modifier.alpha(if (isDragging) 0.85f else 1f)) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth()
@@ -378,7 +401,7 @@ fun PlaylistDetailScreenPapel(
                                             onDragStarted = { dragState.onDragStarted(song) },
                                             onDragStopped = { dragState.onDragStopped() },
                                         )
-                                        .clickable {
+                                        .clickable(interactionSource = rowInteractionSource, indication = null) {
                                             viewModel.playSong(song, fromList = songs)
                                             onSongClick()
                                         }.padding(20.dp, 12.dp, 20.dp, 12.dp),

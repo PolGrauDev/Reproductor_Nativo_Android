@@ -2,6 +2,7 @@ package com.PolGrauDev.reproductor_nativo_android.ui.screens.style.sticker
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -315,6 +316,7 @@ fun PlaylistDetailScreenSticker(
             ) {
                 itemsIndexed(dragState.songs, key = { _, song -> song.id }) { index, song ->
                     ReorderableItem(dragState.reorderableState, key = song.id) { isDragging ->
+                        val rowInteractionSource = remember { MutableInteractionSource() }
                         StickerHardShadowBox(
                             modifier = Modifier.fillMaxWidth().alpha(if (isDragging) 0.85f else 1f),
                             shape = RoundedCornerShape(20.dp),
@@ -326,7 +328,10 @@ fun PlaylistDetailScreenSticker(
                                         onDragStarted = { dragState.onDragStarted(song) },
                                         onDragStopped = { dragState.onDragStopped() },
                                     )
-                                    .clickable { viewModel.playSong(song, fromList = songs); onSongClick() }
+                                    .clickable(interactionSource = rowInteractionSource, indication = null) {
+                                        viewModel.playSong(song, fromList = songs)
+                                        onSongClick()
+                                    }
                                     .padding(9.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {

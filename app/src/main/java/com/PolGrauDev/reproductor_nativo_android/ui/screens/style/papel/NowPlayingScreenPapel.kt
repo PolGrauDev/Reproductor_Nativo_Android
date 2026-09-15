@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.height
@@ -73,7 +74,7 @@ fun NowPlayingScreenPapel(viewModel: MusicViewModel, uiState: MusicUiState, onBa
     var isUserSeeking by remember { mutableStateOf(false) }
     var seekFraction by remember { mutableFloatStateOf(0f) }
 
-    Scaffold(containerColor = PapelColors.Background) { padding ->
+    Scaffold(containerColor = PapelColors.Background, contentWindowInsets = WindowInsets(0, 0, 0, 0)) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             Row(
                 modifier = Modifier.fillMaxWidth().padding(top = 10.dp, start = 4.dp, end = 20.dp),

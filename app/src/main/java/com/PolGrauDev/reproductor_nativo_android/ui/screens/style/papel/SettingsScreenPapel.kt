@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -61,7 +62,7 @@ fun SettingsScreenPapel(
     onSetFadeDurationMs: (Int) -> Unit,
     onSetAppStyle: (AppStyle) -> Unit,
 ) {
-    Scaffold(containerColor = PapelColors.Background) { padding ->
+    Scaffold(containerColor = PapelColors.Background, contentWindowInsets = WindowInsets(0, 0, 0, 0)) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState())) {
             PapelTopBar(onBack = onBack)
             PapelSleepTimerSection(
