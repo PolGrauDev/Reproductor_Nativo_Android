@@ -135,4 +135,7 @@ dependencies {
 
     // Persistencia de ajustes (temporizador, fundido)
     implementation(libs.androidx.datastore.preferences)
+
+    // Arrastrar para reordenar canciones en una playlist
+    implementation(libs.reorderable)
 }

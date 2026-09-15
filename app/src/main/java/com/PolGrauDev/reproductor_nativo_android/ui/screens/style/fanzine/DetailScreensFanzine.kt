@@ -39,6 +39,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
@@ -55,9 +56,11 @@ import com.PolGrauDev.reproductor_nativo_android.data.AlbumArtRequest
 import com.PolGrauDev.reproductor_nativo_android.data.model.Song
 import com.PolGrauDev.reproductor_nativo_android.ui.components.AddSongsToPlaylistDialog
 import com.PolGrauDev.reproductor_nativo_android.ui.components.AddToPlaylistDialog
+import com.PolGrauDev.reproductor_nativo_android.ui.components.rememberPlaylistDragReorderState
 import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.fanzine.FanzineColors
 import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.fanzine.FanzineFonts
 import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.fanzine.fanzineTilt
+import sh.calvin.reorderable.ReorderableItem
 import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.fanzine.photocopyGrain
 import com.PolGrauDev.reproductor_nativo_android.viewmodel.MusicViewModel
 
@@ -310,43 +313,62 @@ fun PlaylistDetailScreenFanzine(
                 Text("Esta playlist todavía no tiene canciones", fontFamily = FanzineFonts.SpecialElite, fontSize = 13.sp, color = FanzineColors.Faded)
             }
         } else {
-            LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                itemsIndexed(songs, key = { _, song -> song.id }) { index, song ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth().rotate(fanzineTilt(index)).background(FanzineColors.Paper).clickable { viewModel.playSong(song, fromList = songs); onSongClick() }.padding(10.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        SubcomposeAsyncImage(
-                            model = AlbumArtRequest(song.contentUri),
-                            contentDescription = null,
-                            modifier = Modifier.size(40.dp),
-                            contentScale = ContentScale.Crop,
-                            loading = { AlbumArtFallbackFanzine() },
-                            error = { AlbumArtFallbackFanzine() },
-                        )
-                        Spacer(Modifier.width(11.dp))
-                        Column(Modifier.weight(1f)) {
-                            Text(song.title.uppercase(), fontFamily = FanzineFonts.Anton, fontSize = 15.sp, color = FanzineColors.Ink, maxLines = 1)
-                            Text(song.artist, fontFamily = FanzineFonts.SpecialElite, fontSize = 12.sp, color = FanzineColors.Grime, maxLines = 1)
+            val dragState = rememberPlaylistDragReorderState(songs) { from, to ->
+                viewModel.moveSongInPlaylist(playlistId, songs.map { it.id }, from, to)
+            }
+            LazyColumn(
+                Modifier.fillMaxSize(),
+                state = dragState.lazyListState,
+                contentPadding = PaddingValues(14.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                itemsIndexed(dragState.songs, key = { _, song -> song.id }) { index, song ->
+                    ReorderableItem(dragState.reorderableState, key = song.id) { isDragging ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth()
+                                .rotate(fanzineTilt(index))
+                                .background(FanzineColors.Paper)
+                                .alpha(if (isDragging) 0.85f else 1f)
+                                .longPressDraggableHandle(
+                                    onDragStarted = { dragState.onDragStarted(song) },
+                                    onDragStopped = { dragState.onDragStopped() },
+                                )
+                                .clickable { viewModel.playSong(song, fromList = songs); onSongClick() }
+                                .padding(10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            SubcomposeAsyncImage(
+                                model = AlbumArtRequest(song.contentUri),
+                                contentDescription = null,
+                                modifier = Modifier.size(40.dp),
+                                contentScale = ContentScale.Crop,
+                                loading = { AlbumArtFallbackFanzine() },
+                                error = { AlbumArtFallbackFanzine() },
+                            )
+                            Spacer(Modifier.width(11.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text(song.title.uppercase(), fontFamily = FanzineFonts.Anton, fontSize = 15.sp, color = FanzineColors.Ink, maxLines = 1)
+                                Text(song.artist, fontFamily = FanzineFonts.SpecialElite, fontSize = 12.sp, color = FanzineColors.Grime, maxLines = 1)
+                            }
+                            Icon(
+                                Icons.Filled.KeyboardArrowUp,
+                                contentDescription = "Subir",
+                                tint = if (index > 0) FanzineColors.Ink else FanzineColors.Faded,
+                                modifier = Modifier.clickable(enabled = index > 0) { viewModel.moveSongInPlaylist(playlistId, songs.map { it.id }, index, index - 1) }.padding(4.dp),
+                            )
+                            Icon(
+                                Icons.Filled.KeyboardArrowDown,
+                                contentDescription = "Bajar",
+                                tint = if (index < songs.lastIndex) FanzineColors.Ink else FanzineColors.Faded,
+                                modifier = Modifier.clickable(enabled = index < songs.lastIndex) { viewModel.moveSongInPlaylist(playlistId, songs.map { it.id }, index, index + 1) }.padding(4.dp),
+                            )
+                            Icon(
+                                Icons.Filled.Close,
+                                contentDescription = "Quitar de la playlist",
+                                tint = FanzineColors.Red,
+                                modifier = Modifier.clickable { viewModel.removeSongFromPlaylist(playlistId, song.id) }.padding(4.dp),
+                            )
                         }
-                        Icon(
-                            Icons.Filled.KeyboardArrowUp,
-                            contentDescription = "Subir",
-                            tint = if (index > 0) FanzineColors.Ink else FanzineColors.Faded,
-                            modifier = Modifier.clickable(enabled = index > 0) { viewModel.moveSongInPlaylist(playlistId, songs.map { it.id }, index, index - 1) }.padding(4.dp),
-                        )
-                        Icon(
-                            Icons.Filled.KeyboardArrowDown,
-                            contentDescription = "Bajar",
-                            tint = if (index < songs.lastIndex) FanzineColors.Ink else FanzineColors.Faded,
-                            modifier = Modifier.clickable(enabled = index < songs.lastIndex) { viewModel.moveSongInPlaylist(playlistId, songs.map { it.id }, index, index + 1) }.padding(4.dp),
-                        )
-                        Icon(
-                            Icons.Filled.Close,
-                            contentDescription = "Quitar de la playlist",
-                            tint = FanzineColors.Red,
-                            modifier = Modifier.clickable { viewModel.removeSongFromPlaylist(playlistId, song.id) }.padding(4.dp),
-                        )
                     }
                 }
             }

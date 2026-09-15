@@ -41,10 +41,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -55,11 +57,13 @@ import com.PolGrauDev.reproductor_nativo_android.data.AlbumArtRequest
 import com.PolGrauDev.reproductor_nativo_android.data.model.Song
 import com.PolGrauDev.reproductor_nativo_android.ui.components.AddSongsToPlaylistDialog
 import com.PolGrauDev.reproductor_nativo_android.ui.components.AddToPlaylistDialog
+import com.PolGrauDev.reproductor_nativo_android.ui.components.rememberPlaylistDragReorderState
 import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.papel.PapelColors
 import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.papel.PapelRowDivider
 import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.papel.PapelSectionLabel
 import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.papel.PapelType
 import com.PolGrauDev.reproductor_nativo_android.viewmodel.MusicViewModel
+import sh.calvin.reorderable.ReorderableItem
 
 @Composable
 private fun PapelDetailTopBar(title: String, onBack: () -> Unit, actions: @Composable RowScope.() -> Unit = {}) {
@@ -67,7 +71,14 @@ private fun PapelDetailTopBar(title: String, onBack: () -> Unit, actions: @Compo
         IconButton(onClick = onBack) {
             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver", tint = PapelColors.OnSurfaceVariant)
         }
-        Text(title.uppercase(), style = PapelType.SectionLabel, color = PapelColors.Accent, modifier = Modifier.weight(1f))
+        Text(
+            title.uppercase(),
+            style = PapelType.SectionLabel,
+            color = PapelColors.Accent,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f),
+        )
         actions()
     }
 }
@@ -354,53 +365,63 @@ fun PlaylistDetailScreenPapel(
                     Text("Esta playlist todavía no tiene canciones", style = PapelType.BodyMedium, color = PapelColors.OnSurfaceVariant)
                 }
             } else {
-                LazyColumn(Modifier.fillMaxSize()) {
-                    itemsIndexed(songs, key = { _, song -> song.id }) { index, song ->
-                        Column {
-                            Row(
-                                modifier = Modifier.fillMaxWidth().clickable {
-                                    viewModel.playSong(song, fromList = songs)
-                                    onSongClick()
-                                }.padding(20.dp, 12.dp, 20.dp, 12.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                SubcomposeAsyncImage(
-                                    model = AlbumArtRequest(song.contentUri),
-                                    contentDescription = null,
-                                    modifier = Modifier.size(40.dp).clip(RoundedCornerShape(2.dp)),
-                                    contentScale = ContentScale.Crop,
-                                    loading = { AlbumArtFallbackPapel() },
-                                    error = { AlbumArtFallbackPapel() },
-                                )
-                                Spacer(Modifier.width(14.dp))
-                                Column(Modifier.weight(1f)) {
-                                    Text(song.title, style = PapelType.TitleMedium, color = PapelColors.OnSurface, maxLines = 1)
-                                    Text(song.artist, style = PapelType.BodySmall, color = PapelColors.OnSurfaceVariant, maxLines = 1)
+                val dragState = rememberPlaylistDragReorderState(songs) { from, to ->
+                    viewModel.moveSongInPlaylist(playlistId, songs.map { it.id }, from, to)
+                }
+                LazyColumn(Modifier.fillMaxSize(), state = dragState.lazyListState) {
+                    itemsIndexed(dragState.songs, key = { _, song -> song.id }) { index, song ->
+                        ReorderableItem(dragState.reorderableState, key = song.id) { isDragging ->
+                            Column(Modifier.alpha(if (isDragging) 0.85f else 1f)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth()
+                                        .longPressDraggableHandle(
+                                            onDragStarted = { dragState.onDragStarted(song) },
+                                            onDragStopped = { dragState.onDragStopped() },
+                                        )
+                                        .clickable {
+                                            viewModel.playSong(song, fromList = songs)
+                                            onSongClick()
+                                        }.padding(20.dp, 12.dp, 20.dp, 12.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    SubcomposeAsyncImage(
+                                        model = AlbumArtRequest(song.contentUri),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(40.dp).clip(RoundedCornerShape(2.dp)),
+                                        contentScale = ContentScale.Crop,
+                                        loading = { AlbumArtFallbackPapel() },
+                                        error = { AlbumArtFallbackPapel() },
+                                    )
+                                    Spacer(Modifier.width(14.dp))
+                                    Column(Modifier.weight(1f)) {
+                                        Text(song.title, style = PapelType.TitleMedium, color = PapelColors.OnSurface, maxLines = 1)
+                                        Text(song.artist, style = PapelType.BodySmall, color = PapelColors.OnSurfaceVariant, maxLines = 1)
+                                    }
+                                    Icon(
+                                        Icons.Filled.KeyboardArrowUp,
+                                        contentDescription = "Subir",
+                                        tint = if (index > 0) PapelColors.OnSurface else PapelColors.Faint,
+                                        modifier = Modifier.clickable(enabled = index > 0) {
+                                            viewModel.moveSongInPlaylist(playlistId, songs.map { it.id }, index, index - 1)
+                                        }.padding(6.dp),
+                                    )
+                                    Icon(
+                                        Icons.Filled.KeyboardArrowDown,
+                                        contentDescription = "Bajar",
+                                        tint = if (index < songs.lastIndex) PapelColors.OnSurface else PapelColors.Faint,
+                                        modifier = Modifier.clickable(enabled = index < songs.lastIndex) {
+                                            viewModel.moveSongInPlaylist(playlistId, songs.map { it.id }, index, index + 1)
+                                        }.padding(6.dp),
+                                    )
+                                    Icon(
+                                        Icons.Filled.Close,
+                                        contentDescription = "Quitar de la playlist",
+                                        tint = PapelColors.OnSurfaceVariant,
+                                        modifier = Modifier.clickable { viewModel.removeSongFromPlaylist(playlistId, song.id) }.padding(6.dp),
+                                    )
                                 }
-                                Icon(
-                                    Icons.Filled.KeyboardArrowUp,
-                                    contentDescription = "Subir",
-                                    tint = if (index > 0) PapelColors.OnSurface else PapelColors.Faint,
-                                    modifier = Modifier.clickable(enabled = index > 0) {
-                                        viewModel.moveSongInPlaylist(playlistId, songs.map { it.id }, index, index - 1)
-                                    }.padding(6.dp),
-                                )
-                                Icon(
-                                    Icons.Filled.KeyboardArrowDown,
-                                    contentDescription = "Bajar",
-                                    tint = if (index < songs.lastIndex) PapelColors.OnSurface else PapelColors.Faint,
-                                    modifier = Modifier.clickable(enabled = index < songs.lastIndex) {
-                                        viewModel.moveSongInPlaylist(playlistId, songs.map { it.id }, index, index + 1)
-                                    }.padding(6.dp),
-                                )
-                                Icon(
-                                    Icons.Filled.Close,
-                                    contentDescription = "Quitar de la playlist",
-                                    tint = PapelColors.OnSurfaceVariant,
-                                    modifier = Modifier.clickable { viewModel.removeSongFromPlaylist(playlistId, song.id) }.padding(6.dp),
-                                )
+                                PapelRowDivider()
                             }
-                            PapelRowDivider()
                         }
                     }
                 }

@@ -112,7 +112,7 @@ private fun StickerSleepTimerCard(uiState: MusicUiState, onStart: (Int) -> Unit,
         shape = RoundedCornerShape(22.dp),
         rotationDegrees = -0.6f,
     ) {
-        Column(Modifier.padding(14.dp)) {
+        Column(Modifier.fillMaxWidth().padding(14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
                     Modifier.size(32.dp).background(StickerColors.Grape, RoundedCornerShape(11.dp)),
@@ -179,7 +179,7 @@ private fun StickerFadeCard(fadeDurationMs: Int, onChange: (Int) -> Unit) {
         shape = RoundedCornerShape(22.dp),
         rotationDegrees = 0.5f,
     ) {
-        Column(Modifier.padding(14.dp)) {
+        Column(Modifier.fillMaxWidth().padding(14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
                     Modifier.size(32.dp).background(StickerColors.Mint, RoundedCornerShape(11.dp)),
@@ -232,7 +232,7 @@ private fun StickerStyleCard(current: AppStyle, onSelect: (AppStyle) -> Unit) {
         shape = RoundedCornerShape(22.dp),
         rotationDegrees = -0.4f,
     ) {
-        Column(Modifier.padding(14.dp)) {
+        Column(Modifier.fillMaxWidth().padding(14.dp)) {
             Text("Estilo del cuaderno", style = StickerType.TitleMedium, color = StickerColors.Ink)
             Spacer(Modifier.height(4.dp))
             Text("elige cómo quieres verlo todo", style = StickerType.HandwrittenSmall, color = StickerColors.Faded)

@@ -39,6 +39,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
@@ -55,9 +56,11 @@ import com.PolGrauDev.reproductor_nativo_android.data.AlbumArtRequest
 import com.PolGrauDev.reproductor_nativo_android.data.model.Song
 import com.PolGrauDev.reproductor_nativo_android.ui.components.AddSongsToPlaylistDialog
 import com.PolGrauDev.reproductor_nativo_android.ui.components.AddToPlaylistDialog
+import com.PolGrauDev.reproductor_nativo_android.ui.components.rememberPlaylistDragReorderState
 import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.sticker.StickerColors
 import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.sticker.StickerHardShadowBox
 import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.sticker.StickerType
+import sh.calvin.reorderable.ReorderableItem
 import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.sticker.stickerTilt
 import com.PolGrauDev.reproductor_nativo_android.viewmodel.MusicViewModel
 
@@ -301,44 +304,64 @@ fun PlaylistDetailScreenSticker(
                 Text("Esta playlist todavía no tiene canciones", style = StickerType.HandwrittenSmall, color = StickerColors.Faded)
             }
         } else {
-            LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(13.dp)) {
-                itemsIndexed(songs, key = { _, song -> song.id }) { index, song ->
-                    StickerHardShadowBox(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), rotationDegrees = stickerTilt(index)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth().clickable { viewModel.playSong(song, fromList = songs); onSongClick() }.padding(9.dp),
-                            verticalAlignment = Alignment.CenterVertically,
+            val dragState = rememberPlaylistDragReorderState(songs) { from, to ->
+                viewModel.moveSongInPlaylist(playlistId, songs.map { it.id }, from, to)
+            }
+            LazyColumn(
+                Modifier.fillMaxSize(),
+                state = dragState.lazyListState,
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(13.dp),
+            ) {
+                itemsIndexed(dragState.songs, key = { _, song -> song.id }) { index, song ->
+                    ReorderableItem(dragState.reorderableState, key = song.id) { isDragging ->
+                        StickerHardShadowBox(
+                            modifier = Modifier.fillMaxWidth().alpha(if (isDragging) 0.85f else 1f),
+                            shape = RoundedCornerShape(20.dp),
+                            rotationDegrees = stickerTilt(index),
                         ) {
-                            SubcomposeAsyncImage(
-                                model = AlbumArtRequest(song.contentUri),
-                                contentDescription = null,
-                                modifier = Modifier.size(46.dp).clip(RoundedCornerShape(14.dp)),
-                                contentScale = ContentScale.Crop,
-                                loading = { AlbumArtFallbackSticker() },
-                                error = { AlbumArtFallbackSticker() },
-                            )
-                            Spacer(Modifier.width(12.dp))
-                            Column(Modifier.weight(1f)) {
-                                Text(song.title, style = StickerType.TitleMedium, color = StickerColors.Ink, maxLines = 1)
-                                Text(song.artist, style = StickerType.HandwrittenSmall, color = StickerColors.Faded, maxLines = 1)
+                            Row(
+                                modifier = Modifier.fillMaxWidth()
+                                    .longPressDraggableHandle(
+                                        onDragStarted = { dragState.onDragStarted(song) },
+                                        onDragStopped = { dragState.onDragStopped() },
+                                    )
+                                    .clickable { viewModel.playSong(song, fromList = songs); onSongClick() }
+                                    .padding(9.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                SubcomposeAsyncImage(
+                                    model = AlbumArtRequest(song.contentUri),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(46.dp).clip(RoundedCornerShape(14.dp)),
+                                    contentScale = ContentScale.Crop,
+                                    loading = { AlbumArtFallbackSticker() },
+                                    error = { AlbumArtFallbackSticker() },
+                                )
+                                Spacer(Modifier.width(12.dp))
+                                Column(Modifier.weight(1f)) {
+                                    Text(song.title, style = StickerType.TitleMedium, color = StickerColors.Ink, maxLines = 1)
+                                    Text(song.artist, style = StickerType.HandwrittenSmall, color = StickerColors.Faded, maxLines = 1)
+                                }
+                                Icon(
+                                    Icons.Filled.KeyboardArrowUp,
+                                    contentDescription = "Subir",
+                                    tint = if (index > 0) StickerColors.Ink else StickerColors.Faded,
+                                    modifier = Modifier.clickable(enabled = index > 0) { viewModel.moveSongInPlaylist(playlistId, songs.map { it.id }, index, index - 1) }.padding(4.dp),
+                                )
+                                Icon(
+                                    Icons.Filled.KeyboardArrowDown,
+                                    contentDescription = "Bajar",
+                                    tint = if (index < songs.lastIndex) StickerColors.Ink else StickerColors.Faded,
+                                    modifier = Modifier.clickable(enabled = index < songs.lastIndex) { viewModel.moveSongInPlaylist(playlistId, songs.map { it.id }, index, index + 1) }.padding(4.dp),
+                                )
+                                Icon(
+                                    Icons.Filled.Close,
+                                    contentDescription = "Quitar de la playlist",
+                                    tint = StickerColors.Faded,
+                                    modifier = Modifier.clickable { viewModel.removeSongFromPlaylist(playlistId, song.id) }.padding(4.dp),
+                                )
                             }
-                            Icon(
-                                Icons.Filled.KeyboardArrowUp,
-                                contentDescription = "Subir",
-                                tint = if (index > 0) StickerColors.Ink else StickerColors.Faded,
-                                modifier = Modifier.clickable(enabled = index > 0) { viewModel.moveSongInPlaylist(playlistId, songs.map { it.id }, index, index - 1) }.padding(4.dp),
-                            )
-                            Icon(
-                                Icons.Filled.KeyboardArrowDown,
-                                contentDescription = "Bajar",
-                                tint = if (index < songs.lastIndex) StickerColors.Ink else StickerColors.Faded,
-                                modifier = Modifier.clickable(enabled = index < songs.lastIndex) { viewModel.moveSongInPlaylist(playlistId, songs.map { it.id }, index, index + 1) }.padding(4.dp),
-                            )
-                            Icon(
-                                Icons.Filled.Close,
-                                contentDescription = "Quitar de la playlist",
-                                tint = StickerColors.Faded,
-                                modifier = Modifier.clickable { viewModel.removeSongFromPlaylist(playlistId, song.id) }.padding(4.dp),
-                            )
                         }
                     }
                 }
