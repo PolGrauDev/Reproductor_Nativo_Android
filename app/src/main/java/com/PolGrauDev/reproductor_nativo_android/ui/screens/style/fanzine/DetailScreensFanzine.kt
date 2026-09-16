@@ -51,6 +51,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -138,7 +139,7 @@ fun AlbumDetailScreenFanzine(viewModel: MusicViewModel, albumId: Long?, onBack: 
                         error = { AlbumArtFallbackFanzine() },
                     )
                     Spacer(Modifier.height(14.dp))
-                    Text(album.title.uppercase(), fontFamily = FanzineFonts.Anton, fontSize = 26.sp, color = FanzineColors.Paper, textAlign = TextAlign.Center, maxLines = 2)
+                    Text(album.title.uppercase(), fontFamily = FanzineFonts.Anton, fontSize = 26.sp, lineHeight = 32.sp, color = FanzineColors.Paper, textAlign = TextAlign.Center, maxLines = 2)
                     Text("${album.artist} · ${album.songs.size} cortes", fontFamily = FanzineFonts.SpecialElite, fontSize = 12.sp, color = FanzineColors.Faded)
                 }
             }
@@ -206,8 +207,8 @@ private fun FanzineDetailSongRow(
     ) {
         Text("$index", fontFamily = FanzineFonts.Anton, fontSize = 18.sp, color = FanzineColors.Red, modifier = Modifier.width(20.dp))
         Column(Modifier.weight(1f)) {
-            Text(song.title.uppercase(), fontFamily = FanzineFonts.Anton, fontSize = 16.sp, color = FanzineColors.Ink, maxLines = 1)
-            Text(song.artist, fontFamily = FanzineFonts.SpecialElite, fontSize = 12.sp, color = FanzineColors.Grime, maxLines = 1)
+            Text(song.title.uppercase(), fontFamily = FanzineFonts.Anton, fontSize = 16.sp, color = FanzineColors.Ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(song.artist, fontFamily = FanzineFonts.SpecialElite, fontSize = 12.sp, color = FanzineColors.Grime, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         if (isPlaying) {
             Icon(Icons.Filled.MusicNote, contentDescription = "Reproduciendo", tint = FanzineColors.Red, modifier = Modifier.size(18.dp))
@@ -281,8 +282,8 @@ fun ArtistDetailScreenFanzine(viewModel: MusicViewModel, artistId: Long?, onBack
                     )
                     Spacer(Modifier.width(11.dp))
                     Column(Modifier.weight(1f)) {
-                        Text(song.title.uppercase(), fontFamily = FanzineFonts.Anton, fontSize = 16.sp, color = FanzineColors.Ink, maxLines = 1)
-                        Text(song.album, fontFamily = FanzineFonts.SpecialElite, fontSize = 12.sp, color = FanzineColors.Grime, maxLines = 1)
+                        Text(song.title.uppercase(), fontFamily = FanzineFonts.Anton, fontSize = 16.sp, color = FanzineColors.Ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(song.album, fontFamily = FanzineFonts.SpecialElite, fontSize = 12.sp, color = FanzineColors.Grime, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                     val isFavorite = song.id in uiState.favoriteSongIds
                     var menuExpanded by remember { mutableStateOf(false) }
@@ -447,9 +448,26 @@ fun PlaylistDetailScreenFanzine(
 
     Column(Modifier.fillMaxSize().background(FanzineColors.Slate).photocopyGrain()) {
         FanzineDetailTopBar(playlist?.name ?: "Lista", onBack) {
-            Icon(Icons.Filled.Add, contentDescription = "Añadir canciones", tint = FanzineColors.Ink, modifier = Modifier.clickable { showAddSongsDialog = true }.padding(6.dp))
-            Icon(Icons.Filled.Edit, contentDescription = "Renombrar playlist", tint = FanzineColors.Ink, modifier = Modifier.clickable { showRenameDialog = true }.padding(6.dp))
-            Icon(Icons.Filled.Delete, contentDescription = "Borrar playlist", tint = FanzineColors.Ink, modifier = Modifier.clickable { showDeleteDialog = true }.padding(6.dp))
+            Icon(
+                Icons.Filled.Add,
+                contentDescription = "Añadir canciones",
+                tint = FanzineColors.Ink,
+                modifier = Modifier.size(32.dp).background(FanzineColors.Paper).clickable { showAddSongsDialog = true }.padding(6.dp),
+            )
+            Spacer(Modifier.width(6.dp))
+            Icon(
+                Icons.Filled.Edit,
+                contentDescription = "Renombrar playlist",
+                tint = FanzineColors.Ink,
+                modifier = Modifier.size(32.dp).background(FanzineColors.Paper).clickable { showRenameDialog = true }.padding(6.dp),
+            )
+            Spacer(Modifier.width(6.dp))
+            Icon(
+                Icons.Filled.Delete,
+                contentDescription = "Borrar playlist",
+                tint = FanzineColors.Ink,
+                modifier = Modifier.size(32.dp).background(FanzineColors.Paper).clickable { showDeleteDialog = true }.padding(6.dp),
+            )
         }
         if (songs.isEmpty()) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -498,8 +516,8 @@ fun PlaylistDetailScreenFanzine(
                                 )
                                 Spacer(Modifier.width(11.dp))
                                 Column(Modifier.weight(1f)) {
-                                    Text(song.title.uppercase(), fontFamily = FanzineFonts.Anton, fontSize = 15.sp, color = FanzineColors.Ink, maxLines = 1)
-                                    Text(song.artist, fontFamily = FanzineFonts.SpecialElite, fontSize = 12.sp, color = FanzineColors.Grime, maxLines = 1)
+                                    Text(song.title.uppercase(), fontFamily = FanzineFonts.Anton, fontSize = 15.sp, color = FanzineColors.Ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Text(song.artist, fontFamily = FanzineFonts.SpecialElite, fontSize = 12.sp, color = FanzineColors.Grime, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 }
                                 Icon(
                                     Icons.Filled.KeyboardArrowUp,

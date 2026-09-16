@@ -26,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.SubcomposeAsyncImage
 import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.sticker.AlbumArtFallbackSticker
@@ -62,8 +63,8 @@ fun MiniPlayerSticker(song: Song, isPlaying: Boolean, onTogglePlayPause: () -> U
             )
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
-                Text(song.title, style = StickerType.TitleMedium, color = StickerColors.Ink, maxLines = 1)
-                Text(song.artist, style = StickerType.HandwrittenSmall, color = StickerColors.Faded, maxLines = 1)
+                Text(song.title, style = StickerType.TitleMedium, color = StickerColors.Ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(song.artist, style = StickerType.HandwrittenSmall, color = StickerColors.Faded, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             Spacer(Modifier.width(12.dp))
             StickerHardShadowBox(

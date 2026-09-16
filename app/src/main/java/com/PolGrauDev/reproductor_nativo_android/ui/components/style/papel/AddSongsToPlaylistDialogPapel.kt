@@ -28,6 +28,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -92,8 +93,8 @@ fun AddSongsToPlaylistDialogPapel(
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Column(Modifier.weight(1f)) {
-                                    Text(song.title, style = PapelType.TitleMedium, color = PapelColors.OnSurface, maxLines = 1)
-                                    Text(song.artist, style = PapelType.BodySmall, color = PapelColors.OnSurfaceVariant, maxLines = 1)
+                                    Text(song.title, style = PapelType.TitleMedium, color = PapelColors.OnSurface, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Text(song.artist, style = PapelType.BodySmall, color = PapelColors.OnSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 }
                                 Icon(
                                     if (isSelected) Icons.Filled.CheckCircle else Icons.Filled.RadioButtonUnchecked,

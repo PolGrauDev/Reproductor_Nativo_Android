@@ -129,7 +129,13 @@ fun NowPlayingScreenPapel(viewModel: MusicViewModel, uiState: MusicUiState, onBa
                 }
 
                 Spacer(Modifier.height(30.dp))
-                Text(song?.title ?: "-", style = PapelType.DisplaySmall, color = PapelColors.OnSurface, maxLines = 1)
+                Text(
+                    song?.title ?: "-",
+                    style = PapelType.DisplaySmall,
+                    color = PapelColors.OnSurface,
+                    maxLines = 2,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                )
                 Text(
                     (song?.artist ?: "-").uppercase(),
                     style = PapelType.SectionLabel,

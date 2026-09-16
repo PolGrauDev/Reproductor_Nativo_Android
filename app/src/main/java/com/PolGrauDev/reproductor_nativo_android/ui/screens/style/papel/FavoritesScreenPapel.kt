@@ -36,6 +36,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.SubcomposeAsyncImage
@@ -123,8 +124,8 @@ fun FavoritesScreenPapel(viewModel: MusicViewModel, onBack: () -> Unit, onSongCl
                             )
                             Spacer(Modifier.width(14.dp))
                             Column(Modifier.weight(1f)) {
-                                Text(song.title, style = PapelType.TitleMedium, color = PapelColors.OnSurface, maxLines = 1)
-                                Text(song.artist, style = PapelType.BodySmall, color = PapelColors.OnSurfaceVariant, maxLines = 1)
+                                Text(song.title, style = PapelType.TitleMedium, color = PapelColors.OnSurface, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text(song.artist, style = PapelType.BodySmall, color = PapelColors.OnSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
                             var menuExpanded by remember { mutableStateOf(false) }
                             Box {

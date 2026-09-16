@@ -127,7 +127,13 @@ fun NowPlayingScreenSticker(viewModel: MusicViewModel, uiState: MusicUiState, on
             }
 
             Spacer(Modifier.height(20.dp))
-            Text(song?.title ?: "-", style = StickerType.HeadlineLarge.let { it.copy(fontSize = 30.sp) }, color = StickerColors.Ink, maxLines = 1)
+            Text(
+                song?.title ?: "-",
+                style = StickerType.HeadlineLarge.let { it.copy(fontSize = 30.sp) },
+                color = StickerColors.Ink,
+                maxLines = 2,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            )
             Text(song?.artist ?: "-", style = StickerType.Handwritten, color = StickerColors.Faded, maxLines = 1)
             Spacer(Modifier.height(18.dp))
 

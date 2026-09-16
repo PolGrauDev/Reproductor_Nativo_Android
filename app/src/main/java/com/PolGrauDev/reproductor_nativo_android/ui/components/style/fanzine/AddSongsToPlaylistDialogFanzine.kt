@@ -33,6 +33,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -96,8 +97,8 @@ fun AddSongsToPlaylistDialogFanzine(
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Column(Modifier.weight(1f)) {
-                                    Text(song.title, fontFamily = FanzineFonts.SpecialElite, fontSize = 15.sp, color = FanzineColors.Ink, maxLines = 1)
-                                    Text(song.artist, fontFamily = FanzineFonts.SpecialElite, fontSize = 11.sp, color = FanzineColors.Grime, maxLines = 1)
+                                    Text(song.title, fontFamily = FanzineFonts.SpecialElite, fontSize = 15.sp, color = FanzineColors.Ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Text(song.artist, fontFamily = FanzineFonts.SpecialElite, fontSize = 11.sp, color = FanzineColors.Grime, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 }
                                 Icon(
                                     if (isSelected) Icons.Filled.CheckCircle else Icons.Filled.RadioButtonUnchecked,

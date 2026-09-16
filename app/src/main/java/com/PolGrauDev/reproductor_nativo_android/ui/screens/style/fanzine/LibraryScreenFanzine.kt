@@ -50,6 +50,7 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -363,8 +364,8 @@ fun FanzineSongRow(
         )
         Spacer(Modifier.width(11.dp))
         Column(Modifier.weight(1f)) {
-            Text(song.title.uppercase(), fontFamily = FanzineFonts.Anton, fontSize = 17.sp, color = FanzineColors.Ink, maxLines = 1)
-            Text(song.artist, fontFamily = FanzineFonts.SpecialElite, fontSize = 13.sp, color = FanzineColors.Grime, maxLines = 1)
+            Text(song.title.uppercase(), fontFamily = FanzineFonts.Anton, fontSize = 17.sp, color = FanzineColors.Ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(song.artist, fontFamily = FanzineFonts.SpecialElite, fontSize = 13.sp, color = FanzineColors.Grime, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         var menuExpanded by remember { mutableStateOf(false) }
         Box {

@@ -32,6 +32,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -102,8 +103,8 @@ fun AddSongsToPlaylistDialogSticker(
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) {
                                     Column(Modifier.weight(1f)) {
-                                        Text(song.title, style = StickerType.TitleMedium, color = StickerColors.Ink, maxLines = 1)
-                                        Text(song.artist, style = StickerType.HandwrittenSmall, color = StickerColors.Faded, maxLines = 1)
+                                        Text(song.title, style = StickerType.TitleMedium, color = StickerColors.Ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                        Text(song.artist, style = StickerType.HandwrittenSmall, color = StickerColors.Faded, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                     }
                                     Icon(
                                         if (isSelected) Icons.Filled.CheckCircle else Icons.Filled.RadioButtonUnchecked,

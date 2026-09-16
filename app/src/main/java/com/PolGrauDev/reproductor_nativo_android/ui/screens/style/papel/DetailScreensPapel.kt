@@ -222,8 +222,8 @@ private fun PapelDetailSongRow(
         ) {
             Text("$index", style = PapelType.Mono, color = PapelColors.Faint, modifier = Modifier.width(20.dp))
             Column(Modifier.weight(1f)) {
-                Text(song.title, style = PapelType.TitleMedium, color = PapelColors.OnSurface, maxLines = 1)
-                Text(song.artist, style = PapelType.BodySmall, color = PapelColors.OnSurfaceVariant, maxLines = 1)
+                Text(song.title, style = PapelType.TitleMedium, color = PapelColors.OnSurface, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(song.artist, style = PapelType.BodySmall, color = PapelColors.OnSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             if (isPlaying) {
                 Icon(Icons.Filled.MusicNote, contentDescription = "Reproduciendo", tint = PapelColors.Accent, modifier = Modifier.size(18.dp))
@@ -301,8 +301,8 @@ fun ArtistDetailScreenPapel(viewModel: MusicViewModel, artistId: Long?, onBack: 
                             )
                             Spacer(Modifier.width(14.dp))
                             Column(Modifier.weight(1f)) {
-                                Text(song.title, style = PapelType.TitleMedium, color = PapelColors.OnSurface, maxLines = 1)
-                                Text(song.album, style = PapelType.BodySmall, color = PapelColors.OnSurfaceVariant, maxLines = 1)
+                                Text(song.title, style = PapelType.TitleMedium, color = PapelColors.OnSurface, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text(song.album, style = PapelType.BodySmall, color = PapelColors.OnSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
                             val isFavorite = song.id in uiState.favoriteSongIds
                             var menuExpanded by remember { mutableStateOf(false) }
@@ -541,8 +541,8 @@ fun PlaylistDetailScreenPapel(
                                     )
                                     Spacer(Modifier.width(14.dp))
                                     Column(Modifier.weight(1f)) {
-                                        Text(song.title, style = PapelType.TitleMedium, color = PapelColors.OnSurface, maxLines = 1)
-                                        Text(song.artist, style = PapelType.BodySmall, color = PapelColors.OnSurfaceVariant, maxLines = 1)
+                                        Text(song.title, style = PapelType.TitleMedium, color = PapelColors.OnSurface, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                        Text(song.artist, style = PapelType.BodySmall, color = PapelColors.OnSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                     }
                                     Icon(
                                         Icons.Filled.KeyboardArrowUp,

@@ -140,7 +140,15 @@ fun NowPlayingScreenFanzine(viewModel: MusicViewModel, uiState: MusicUiState, on
             }
 
             Spacer(Modifier.height(20.dp))
-            Text((song?.title ?: "-").uppercase(), fontFamily = FanzineFonts.Anton, fontSize = 32.sp, color = FanzineColors.Paper, maxLines = 1)
+            Text(
+                (song?.title ?: "-").uppercase(),
+                fontFamily = FanzineFonts.Anton,
+                fontSize = 32.sp,
+                lineHeight = 40.sp,
+                color = FanzineColors.Paper,
+                maxLines = 2,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            )
             Text((song?.artist ?: "-").uppercase(), fontFamily = FanzineFonts.SpecialElite, fontSize = 13.sp, color = FanzineColors.Faded, maxLines = 1, modifier = Modifier.padding(top = 6.dp))
             Spacer(Modifier.height(18.dp))
 

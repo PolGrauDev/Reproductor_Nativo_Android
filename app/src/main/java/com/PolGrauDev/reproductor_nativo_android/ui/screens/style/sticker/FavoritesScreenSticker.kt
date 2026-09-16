@@ -40,6 +40,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.SubcomposeAsyncImage
@@ -124,8 +125,8 @@ fun FavoritesScreenSticker(viewModel: MusicViewModel, onBack: () -> Unit, onSong
                                 )
                                 Spacer(Modifier.width(12.dp))
                                 Column(Modifier.weight(1f)) {
-                                    Text(song.title, style = StickerType.TitleMedium, color = StickerColors.Ink, maxLines = 1)
-                                    Text(song.artist, style = StickerType.HandwrittenSmall, color = StickerColors.Faded, maxLines = 1)
+                                    Text(song.title, style = StickerType.TitleMedium, color = StickerColors.Ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Text(song.artist, style = StickerType.HandwrittenSmall, color = StickerColors.Faded, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 }
                                 var menuExpanded by remember { mutableStateOf(false) }
                                 Box {

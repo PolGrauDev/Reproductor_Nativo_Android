@@ -51,6 +51,7 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -195,8 +196,8 @@ private fun StickerDetailSongRow(
     StickerHardShadowBox(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), rotationDegrees = tilt) {
         Row(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(11.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text(song.title, style = StickerType.TitleMedium, color = StickerColors.Ink, maxLines = 1)
-                Text(song.artist, style = StickerType.HandwrittenSmall, color = StickerColors.Faded, maxLines = 1)
+                Text(song.title, style = StickerType.TitleMedium, color = StickerColors.Ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(song.artist, style = StickerType.HandwrittenSmall, color = StickerColors.Faded, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             if (isPlaying) {
                 Icon(Icons.Filled.MusicNote, contentDescription = "Reproduciendo", tint = StickerColors.Pink, modifier = Modifier.size(18.dp))
@@ -272,8 +273,8 @@ fun ArtistDetailScreenSticker(viewModel: MusicViewModel, artistId: Long?, onBack
                         )
                         Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)) {
-                            Text(song.title, style = StickerType.TitleMedium, color = StickerColors.Ink, maxLines = 1)
-                            Text(song.album, style = StickerType.HandwrittenSmall, color = StickerColors.Faded, maxLines = 1)
+                            Text(song.title, style = StickerType.TitleMedium, color = StickerColors.Ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(song.album, style = StickerType.HandwrittenSmall, color = StickerColors.Faded, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
                         val isFavorite = song.id in uiState.favoriteSongIds
                         var menuExpanded by remember { mutableStateOf(false) }
@@ -487,8 +488,8 @@ fun PlaylistDetailScreenSticker(
                                 )
                                 Spacer(Modifier.width(12.dp))
                                 Column(Modifier.weight(1f)) {
-                                    Text(song.title, style = StickerType.TitleMedium, color = StickerColors.Ink, maxLines = 1)
-                                    Text(song.artist, style = StickerType.HandwrittenSmall, color = StickerColors.Faded, maxLines = 1)
+                                    Text(song.title, style = StickerType.TitleMedium, color = StickerColors.Ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Text(song.artist, style = StickerType.HandwrittenSmall, color = StickerColors.Faded, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 }
                                 Icon(
                                     Icons.Filled.KeyboardArrowUp,

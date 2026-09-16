@@ -34,6 +34,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -95,7 +96,7 @@ fun QueueScreenSticker(viewModel: MusicViewModel, onBack: () -> Unit) {
                         )
                         Spacer(Modifier.width(10.dp))
                         Column(Modifier.weight(1f)) {
-                            Text(song.title, style = StickerType.TitleMedium.let { it.copy(fontSize = 16.sp) }, color = if (isCurrent) Color.White else StickerColors.Ink, maxLines = 1)
+                            Text(song.title, style = StickerType.TitleMedium.let { it.copy(fontSize = 16.sp) }, color = if (isCurrent) Color.White else StickerColors.Ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             if (isCurrent) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Icon(Icons.Filled.MusicNote, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))

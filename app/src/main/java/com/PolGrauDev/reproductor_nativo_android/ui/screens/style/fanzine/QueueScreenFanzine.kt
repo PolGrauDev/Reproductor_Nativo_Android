@@ -34,6 +34,7 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -95,11 +96,11 @@ fun QueueScreenFanzine(viewModel: MusicViewModel, onBack: () -> Unit) {
                     )
                     Spacer(Modifier.width(10.dp))
                     Column(Modifier.weight(1f)) {
-                        Text(song.title.uppercase(), fontFamily = FanzineFonts.Anton, fontSize = 15.sp, color = if (isCurrent) FanzineColors.Ink else FanzineColors.Paper, maxLines = 1)
+                        Text(song.title.uppercase(), fontFamily = FanzineFonts.Anton, fontSize = 15.sp, color = if (isCurrent) FanzineColors.Ink else FanzineColors.Paper, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         if (isCurrent) {
                             Text("suena ahora", fontFamily = FanzineFonts.SpecialElite, fontSize = 11.sp, color = FanzineColors.Ink)
                         } else {
-                            Text(song.artist, fontFamily = FanzineFonts.SpecialElite, fontSize = 12.sp, color = FanzineColors.Faded, maxLines = 1)
+                            Text(song.artist, fontFamily = FanzineFonts.SpecialElite, fontSize = 12.sp, color = FanzineColors.Faded, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
                     }
                     if (isCurrent) {
