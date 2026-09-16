@@ -4,6 +4,7 @@ import android.content.Context
 import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.util.Log
+import java.io.File
 
 /**
  * Extrae la carátula embebida de un archivo de audio vía [MediaMetadataRetriever].
@@ -23,5 +24,13 @@ object AlbumArtExtractor {
         } finally {
             retriever.release()
         }
+    }
+
+    fun customArtFile(context: Context, songId: Long): File =
+        File(context.filesDir, "song_art/$songId.jpg")
+
+    fun extractCustomArt(context: Context, songId: Long): ByteArray? {
+        val file = customArtFile(context, songId)
+        return if (file.exists()) file.readBytes() else null
     }
 }

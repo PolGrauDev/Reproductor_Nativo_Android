@@ -112,7 +112,7 @@ fun NowPlayingScreenSticker(viewModel: MusicViewModel, uiState: MusicUiState, on
             ) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     SubcomposeAsyncImage(
-                        model = song?.contentUri?.let { AlbumArtRequest(it) },
+                        model = song?.let { AlbumArtRequest(it.contentUri, it.id) },
                         contentDescription = null,
                         modifier = Modifier
                             .fillMaxWidth(0.85f)

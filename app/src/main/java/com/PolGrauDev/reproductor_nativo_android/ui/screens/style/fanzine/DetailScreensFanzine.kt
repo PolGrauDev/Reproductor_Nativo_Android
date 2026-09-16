@@ -1,5 +1,9 @@
 package com.PolGrauDev.reproductor_nativo_android.ui.screens.style.fanzine
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -26,10 +30,9 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -37,6 +40,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -44,6 +48,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -54,16 +59,21 @@ import coil3.compose.SubcomposeAsyncImage
 import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.fanzine.AlbumArtFallbackFanzine
 import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.AppStyle
 import com.PolGrauDev.reproductor_nativo_android.data.AlbumArtRequest
+import com.PolGrauDev.reproductor_nativo_android.data.SongArtStorage
 import com.PolGrauDev.reproductor_nativo_android.data.model.Song
 import com.PolGrauDev.reproductor_nativo_android.ui.components.AddSongsToPlaylistDialog
 import com.PolGrauDev.reproductor_nativo_android.ui.components.AddToPlaylistDialog
+import com.PolGrauDev.reproductor_nativo_android.ui.components.EditSongDialog
+import com.PolGrauDev.reproductor_nativo_android.ui.components.SongOptionsMenu
 import com.PolGrauDev.reproductor_nativo_android.ui.components.rememberPlaylistDragReorderState
 import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.fanzine.FanzineColors
 import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.fanzine.FanzineFonts
 import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.fanzine.fanzineTilt
+import com.PolGrauDev.reproductor_nativo_android.ui.util.shareSong
 import sh.calvin.reorderable.ReorderableItem
 import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.fanzine.photocopyGrain
 import com.PolGrauDev.reproductor_nativo_android.viewmodel.MusicViewModel
+import kotlinx.coroutines.launch
 
 @Composable
 private fun FanzineDetailTopBar(title: String, onBack: () -> Unit, actions: @Composable RowScope.() -> Unit = {}) {
@@ -92,6 +102,21 @@ fun AlbumDetailScreenFanzine(viewModel: MusicViewModel, albumId: Long?, onBack: 
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val album = uiState.albums.firstOrNull { it.albumId == albumId }
     var songForPlaylistDialog by remember { mutableStateOf<Song?>(null) }
+    var songForEditDialog by remember { mutableStateOf<Song?>(null) }
+    var songForImagePick by remember { mutableStateOf<Song?>(null) }
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val imagePickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri: Uri? ->
+        val song = songForImagePick
+        songForImagePick = null
+        if (uri != null && song != null) {
+            scope.launch {
+                SongArtStorage.copyPickedArt(context, song.id, uri)
+                SongArtStorage.invalidateCache(context, song)
+                viewModel.setCustomArtUpdated(song.id)
+            }
+        }
+    }
 
     Column(Modifier.fillMaxSize().background(FanzineColors.Slate).photocopyGrain()) {
         FanzineDetailTopBar(album?.title ?: "Disco", onBack)
@@ -105,7 +130,7 @@ fun AlbumDetailScreenFanzine(viewModel: MusicViewModel, albumId: Long?, onBack: 
             item {
                 Column(Modifier.fillMaxWidth().padding(bottom = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     SubcomposeAsyncImage(
-                        model = AlbumArtRequest(album.songs.first().contentUri),
+                        model = AlbumArtRequest(album.songs.first().contentUri, album.songs.first().id),
                         contentDescription = null,
                         modifier = Modifier.size(132.dp).rotate(-1.5f).border(2.dp, FanzineColors.Paper),
                         contentScale = ContentScale.Crop,
@@ -127,6 +152,12 @@ fun AlbumDetailScreenFanzine(viewModel: MusicViewModel, albumId: Long?, onBack: 
                     onClick = { viewModel.playSong(song, fromList = album.songs); onSongClick() },
                     onToggleFavorite = { viewModel.toggleFavorite(song.id) },
                     onAddToPlaylist = { songForPlaylistDialog = song },
+                    onChangeImage = {
+                        songForImagePick = song
+                        imagePickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                    },
+                    onEditInfo = { songForEditDialog = song },
+                    onShare = { shareSong(context, song) },
                 )
             }
         }
@@ -144,6 +175,15 @@ fun AlbumDetailScreenFanzine(viewModel: MusicViewModel, albumId: Long?, onBack: 
             onCreatePlaylist = { name -> viewModel.createPlaylistAndAddSong(name, song.id); songForPlaylistDialog = null },
         )
     }
+
+    songForEditDialog?.let { song ->
+        EditSongDialog(
+            appStyle = AppStyle.FANZINE,
+            song = song,
+            onDismiss = { songForEditDialog = null },
+            onSave = { title, artist, album -> viewModel.setSongInfo(song.id, title, artist, album); songForEditDialog = null },
+        )
+    }
 }
 
 @Composable
@@ -156,6 +196,9 @@ private fun FanzineDetailSongRow(
     onClick: () -> Unit,
     onToggleFavorite: () -> Unit,
     onAddToPlaylist: () -> Unit,
+    onChangeImage: () -> Unit,
+    onEditInfo: () -> Unit,
+    onShare: () -> Unit,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth().rotate(tilt).background(FanzineColors.Paper).clickable(onClick = onClick).padding(11.dp, 9.dp),
@@ -170,13 +213,26 @@ private fun FanzineDetailSongRow(
             Icon(Icons.Filled.MusicNote, contentDescription = "Reproduciendo", tint = FanzineColors.Red, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(6.dp))
         }
-        Icon(
-            if (isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-            contentDescription = null,
-            tint = FanzineColors.Ink,
-            modifier = Modifier.clickable(onClick = onToggleFavorite).padding(6.dp),
-        )
-        Icon(Icons.Filled.Add, contentDescription = "Añadir a playlist", tint = FanzineColors.Ink, modifier = Modifier.clickable(onClick = onAddToPlaylist).padding(6.dp))
+        var menuExpanded by remember { mutableStateOf(false) }
+        Box {
+            Icon(
+                Icons.Filled.MoreVert,
+                contentDescription = "Más opciones",
+                tint = FanzineColors.Ink,
+                modifier = Modifier.clickable { menuExpanded = true }.padding(6.dp),
+            )
+            SongOptionsMenu(
+                appStyle = AppStyle.FANZINE,
+                expanded = menuExpanded,
+                isFavorite = isFavorite,
+                onDismiss = { menuExpanded = false },
+                onAddToPlaylist = onAddToPlaylist,
+                onToggleFavorite = onToggleFavorite,
+                onChangeImage = onChangeImage,
+                onEditInfo = onEditInfo,
+                onShare = onShare,
+            )
+        }
     }
 }
 
@@ -185,6 +241,21 @@ fun ArtistDetailScreenFanzine(viewModel: MusicViewModel, artistId: Long?, onBack
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val artist = uiState.artists.firstOrNull { it.artistId == artistId }
     var songForPlaylistDialog by remember { mutableStateOf<Song?>(null) }
+    var songForEditDialog by remember { mutableStateOf<Song?>(null) }
+    var songForImagePick by remember { mutableStateOf<Song?>(null) }
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val imagePickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri: Uri? ->
+        val song = songForImagePick
+        songForImagePick = null
+        if (uri != null && song != null) {
+            scope.launch {
+                SongArtStorage.copyPickedArt(context, song.id, uri)
+                SongArtStorage.invalidateCache(context, song)
+                viewModel.setCustomArtUpdated(song.id)
+            }
+        }
+    }
 
     Column(Modifier.fillMaxSize().background(FanzineColors.Slate).photocopyGrain()) {
         FanzineDetailTopBar(artist?.name ?: "Grupo", onBack)
@@ -201,7 +272,7 @@ fun ArtistDetailScreenFanzine(viewModel: MusicViewModel, artistId: Long?, onBack
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     SubcomposeAsyncImage(
-                        model = AlbumArtRequest(song.contentUri),
+                        model = AlbumArtRequest(song.contentUri, song.id),
                         contentDescription = null,
                         modifier = Modifier.size(46.dp),
                         contentScale = ContentScale.Crop,
@@ -214,13 +285,29 @@ fun ArtistDetailScreenFanzine(viewModel: MusicViewModel, artistId: Long?, onBack
                         Text(song.album, fontFamily = FanzineFonts.SpecialElite, fontSize = 12.sp, color = FanzineColors.Grime, maxLines = 1)
                     }
                     val isFavorite = song.id in uiState.favoriteSongIds
-                    Icon(
-                        if (isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-                        contentDescription = null,
-                        tint = FanzineColors.Ink,
-                        modifier = Modifier.clickable { viewModel.toggleFavorite(song.id) }.padding(6.dp),
-                    )
-                    Icon(Icons.Filled.Add, contentDescription = "Añadir a playlist", tint = FanzineColors.Ink, modifier = Modifier.clickable { songForPlaylistDialog = song }.padding(6.dp))
+                    var menuExpanded by remember { mutableStateOf(false) }
+                    Box {
+                        Icon(
+                            Icons.Filled.MoreVert,
+                            contentDescription = "Más opciones",
+                            tint = FanzineColors.Ink,
+                            modifier = Modifier.clickable { menuExpanded = true }.padding(6.dp),
+                        )
+                        SongOptionsMenu(
+                            appStyle = AppStyle.FANZINE,
+                            expanded = menuExpanded,
+                            isFavorite = isFavorite,
+                            onDismiss = { menuExpanded = false },
+                            onAddToPlaylist = { songForPlaylistDialog = song },
+                            onToggleFavorite = { viewModel.toggleFavorite(song.id) },
+                            onChangeImage = {
+                                songForImagePick = song
+                                imagePickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                            },
+                            onEditInfo = { songForEditDialog = song },
+                            onShare = { shareSong(context, song) },
+                        )
+                    }
                 }
             }
         }
@@ -238,6 +325,15 @@ fun ArtistDetailScreenFanzine(viewModel: MusicViewModel, artistId: Long?, onBack
             onCreatePlaylist = { name -> viewModel.createPlaylistAndAddSong(name, song.id); songForPlaylistDialog = null },
         )
     }
+
+    songForEditDialog?.let { song ->
+        EditSongDialog(
+            appStyle = AppStyle.FANZINE,
+            song = song,
+            onDismiss = { songForEditDialog = null },
+            onSave = { title, artist, album -> viewModel.setSongInfo(song.id, title, artist, album); songForEditDialog = null },
+        )
+    }
 }
 
 @Composable
@@ -245,6 +341,21 @@ fun FolderDetailScreenFanzine(viewModel: MusicViewModel, folderPath: String, onB
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val folder = uiState.folders.firstOrNull { it.path == folderPath }
     var songForPlaylistDialog by remember { mutableStateOf<Song?>(null) }
+    var songForEditDialog by remember { mutableStateOf<Song?>(null) }
+    var songForImagePick by remember { mutableStateOf<Song?>(null) }
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val imagePickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri: Uri? ->
+        val song = songForImagePick
+        songForImagePick = null
+        if (uri != null && song != null) {
+            scope.launch {
+                SongArtStorage.copyPickedArt(context, song.id, uri)
+                SongArtStorage.invalidateCache(context, song)
+                viewModel.setCustomArtUpdated(song.id)
+            }
+        }
+    }
 
     Column(Modifier.fillMaxSize().background(FanzineColors.Slate).photocopyGrain()) {
         FanzineDetailTopBar(folder?.name ?: "Carpeta", onBack)
@@ -268,6 +379,12 @@ fun FolderDetailScreenFanzine(viewModel: MusicViewModel, folderPath: String, onB
                     onClick = { viewModel.playSong(song, fromList = folder.songs); onSongClick() },
                     onToggleFavorite = { viewModel.toggleFavorite(song.id) },
                     onAddToPlaylist = { songForPlaylistDialog = song },
+                    onChangeImage = {
+                        songForImagePick = song
+                        imagePickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                    },
+                    onEditInfo = { songForEditDialog = song },
+                    onShare = { shareSong(context, song) },
                 )
             }
         }
@@ -283,6 +400,15 @@ fun FolderDetailScreenFanzine(viewModel: MusicViewModel, folderPath: String, onB
             onDismiss = { songForPlaylistDialog = null },
             onPlaylistSelected = { playlistId -> viewModel.addSongToPlaylist(playlistId, song.id); songForPlaylistDialog = null },
             onCreatePlaylist = { name -> viewModel.createPlaylistAndAddSong(name, song.id); songForPlaylistDialog = null },
+        )
+    }
+
+    songForEditDialog?.let { song ->
+        EditSongDialog(
+            appStyle = AppStyle.FANZINE,
+            song = song,
+            onDismiss = { songForEditDialog = null },
+            onSave = { title, artist, album -> viewModel.setSongInfo(song.id, title, artist, album); songForEditDialog = null },
         )
     }
 }
@@ -302,6 +428,22 @@ fun PlaylistDetailScreenFanzine(
     var showRenameDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showAddSongsDialog by remember { mutableStateOf(false) }
+    var songForPlaylistDialog by remember { mutableStateOf<Song?>(null) }
+    var songForEditDialog by remember { mutableStateOf<Song?>(null) }
+    var songForImagePick by remember { mutableStateOf<Song?>(null) }
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val imagePickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri: Uri? ->
+        val song = songForImagePick
+        songForImagePick = null
+        if (uri != null && song != null) {
+            scope.launch {
+                SongArtStorage.copyPickedArt(context, song.id, uri)
+                SongArtStorage.invalidateCache(context, song)
+                viewModel.setCustomArtUpdated(song.id)
+            }
+        }
+    }
 
     Column(Modifier.fillMaxSize().background(FanzineColors.Slate).photocopyGrain()) {
         FanzineDetailTopBar(playlist?.name ?: "Lista", onBack) {
@@ -347,7 +489,7 @@ fun PlaylistDetailScreenFanzine(
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 SubcomposeAsyncImage(
-                                    model = AlbumArtRequest(song.contentUri),
+                                    model = AlbumArtRequest(song.contentUri, song.id),
                                     contentDescription = null,
                                     modifier = Modifier.size(40.dp),
                                     contentScale = ContentScale.Crop,
@@ -377,6 +519,30 @@ fun PlaylistDetailScreenFanzine(
                                     tint = FanzineColors.Red,
                                     modifier = Modifier.clickable { viewModel.removeSongFromPlaylist(playlistId, song.id) }.padding(4.dp),
                                 )
+                                val isFavorite = song.id in uiState.favoriteSongIds
+                                var menuExpanded by remember { mutableStateOf(false) }
+                                Box {
+                                    Icon(
+                                        Icons.Filled.MoreVert,
+                                        contentDescription = "Más opciones",
+                                        tint = FanzineColors.Ink,
+                                        modifier = Modifier.clickable { menuExpanded = true }.padding(4.dp),
+                                    )
+                                    SongOptionsMenu(
+                                        appStyle = AppStyle.FANZINE,
+                                        expanded = menuExpanded,
+                                        isFavorite = isFavorite,
+                                        onDismiss = { menuExpanded = false },
+                                        onAddToPlaylist = { songForPlaylistDialog = song },
+                                        onToggleFavorite = { viewModel.toggleFavorite(song.id) },
+                                        onChangeImage = {
+                                            songForImagePick = song
+                                            imagePickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                                        },
+                                        onEditInfo = { songForEditDialog = song },
+                                        onShare = { shareSong(context, song) },
+                                    )
+                                }
                             }
                         }
                     }
@@ -411,6 +577,28 @@ fun PlaylistDetailScreenFanzine(
                 ids.forEach { viewModel.addSongToPlaylist(playlistId, it) }
                 showAddSongsDialog = false
             },
+        )
+    }
+
+    songForPlaylistDialog?.let { song ->
+        val playlistIdsWithSong by remember(song.id) { viewModel.playlistIdsContainingSong(song.id) }
+            .collectAsStateWithLifecycle(initialValue = emptySet())
+        AddToPlaylistDialog(
+            appStyle = AppStyle.FANZINE,
+            playlists = uiState.playlists,
+            playlistIdsWithSong = playlistIdsWithSong,
+            onDismiss = { songForPlaylistDialog = null },
+            onPlaylistSelected = { targetPlaylistId -> viewModel.addSongToPlaylist(targetPlaylistId, song.id); songForPlaylistDialog = null },
+            onCreatePlaylist = { name -> viewModel.createPlaylistAndAddSong(name, song.id); songForPlaylistDialog = null },
+        )
+    }
+
+    songForEditDialog?.let { song ->
+        EditSongDialog(
+            appStyle = AppStyle.FANZINE,
+            song = song,
+            onDismiss = { songForEditDialog = null },
+            onSave = { title, artist, album -> viewModel.setSongInfo(song.id, title, artist, album); songForEditDialog = null },
         )
     }
 }

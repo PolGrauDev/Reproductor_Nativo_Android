@@ -1,5 +1,9 @@
 package com.PolGrauDev.reproductor_nativo_android.ui.screens.style.sticker
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -26,10 +30,9 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -37,6 +40,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -45,6 +49,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -54,16 +59,21 @@ import coil3.compose.SubcomposeAsyncImage
 import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.sticker.AlbumArtFallbackSticker
 import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.AppStyle
 import com.PolGrauDev.reproductor_nativo_android.data.AlbumArtRequest
+import com.PolGrauDev.reproductor_nativo_android.data.SongArtStorage
 import com.PolGrauDev.reproductor_nativo_android.data.model.Song
 import com.PolGrauDev.reproductor_nativo_android.ui.components.AddSongsToPlaylistDialog
 import com.PolGrauDev.reproductor_nativo_android.ui.components.AddToPlaylistDialog
+import com.PolGrauDev.reproductor_nativo_android.ui.components.EditSongDialog
+import com.PolGrauDev.reproductor_nativo_android.ui.components.SongOptionsMenu
 import com.PolGrauDev.reproductor_nativo_android.ui.components.rememberPlaylistDragReorderState
 import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.sticker.StickerColors
 import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.sticker.StickerHardShadowBox
 import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.sticker.StickerType
+import com.PolGrauDev.reproductor_nativo_android.ui.util.shareSong
 import sh.calvin.reorderable.ReorderableItem
 import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.sticker.stickerTilt
 import com.PolGrauDev.reproductor_nativo_android.viewmodel.MusicViewModel
+import kotlinx.coroutines.launch
 
 @Composable
 private fun StickerDetailTopBar(title: String, onBack: () -> Unit, actions: @Composable RowScope.() -> Unit = {}) {
@@ -84,6 +94,21 @@ fun AlbumDetailScreenSticker(viewModel: MusicViewModel, albumId: Long?, onBack: 
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val album = uiState.albums.firstOrNull { it.albumId == albumId }
     var songForPlaylistDialog by remember { mutableStateOf<Song?>(null) }
+    var songForEditDialog by remember { mutableStateOf<Song?>(null) }
+    var songForImagePick by remember { mutableStateOf<Song?>(null) }
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val imagePickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri: Uri? ->
+        val song = songForImagePick
+        songForImagePick = null
+        if (uri != null && song != null) {
+            scope.launch {
+                SongArtStorage.copyPickedArt(context, song.id, uri)
+                SongArtStorage.invalidateCache(context, song)
+                viewModel.setCustomArtUpdated(song.id)
+            }
+        }
+    }
 
     Column(Modifier.fillMaxSize().background(StickerColors.Paper)) {
         StickerDetailTopBar(album?.title ?: "Álbum", onBack)
@@ -98,7 +123,7 @@ fun AlbumDetailScreenSticker(viewModel: MusicViewModel, albumId: Long?, onBack: 
                 Column(Modifier.fillMaxWidth().padding(bottom = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     StickerHardShadowBox(modifier = Modifier.size(140.dp), shape = RoundedCornerShape(22.dp), rotationDegrees = -2f) {
                         SubcomposeAsyncImage(
-                            model = AlbumArtRequest(album.songs.first().contentUri),
+                            model = AlbumArtRequest(album.songs.first().contentUri, album.songs.first().id),
                             contentDescription = null,
                             modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(20.dp)),
                             contentScale = ContentScale.Crop,
@@ -120,6 +145,12 @@ fun AlbumDetailScreenSticker(viewModel: MusicViewModel, albumId: Long?, onBack: 
                     onClick = { viewModel.playSong(song, fromList = album.songs); onSongClick() },
                     onToggleFavorite = { viewModel.toggleFavorite(song.id) },
                     onAddToPlaylist = { songForPlaylistDialog = song },
+                    onChangeImage = {
+                        songForImagePick = song
+                        imagePickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                    },
+                    onEditInfo = { songForEditDialog = song },
+                    onShare = { shareSong(context, song) },
                 )
             }
         }
@@ -137,6 +168,15 @@ fun AlbumDetailScreenSticker(viewModel: MusicViewModel, albumId: Long?, onBack: 
             onCreatePlaylist = { name -> viewModel.createPlaylistAndAddSong(name, song.id); songForPlaylistDialog = null },
         )
     }
+
+    songForEditDialog?.let { song ->
+        EditSongDialog(
+            appStyle = AppStyle.STICKERS,
+            song = song,
+            onDismiss = { songForEditDialog = null },
+            onSave = { title, artist, album -> viewModel.setSongInfo(song.id, title, artist, album); songForEditDialog = null },
+        )
+    }
 }
 
 @Composable
@@ -148,6 +188,9 @@ private fun StickerDetailSongRow(
     onClick: () -> Unit,
     onToggleFavorite: () -> Unit,
     onAddToPlaylist: () -> Unit,
+    onChangeImage: () -> Unit,
+    onEditInfo: () -> Unit,
+    onShare: () -> Unit,
 ) {
     StickerHardShadowBox(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), rotationDegrees = tilt) {
         Row(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(11.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -159,13 +202,26 @@ private fun StickerDetailSongRow(
                 Icon(Icons.Filled.MusicNote, contentDescription = "Reproduciendo", tint = StickerColors.Pink, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
             }
-            Icon(
-                if (isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-                contentDescription = null,
-                tint = StickerColors.Pink,
-                modifier = Modifier.clickable(onClick = onToggleFavorite).padding(6.dp),
-            )
-            Icon(Icons.Filled.Add, contentDescription = "Añadir a playlist", tint = StickerColors.Grape, modifier = Modifier.clickable(onClick = onAddToPlaylist).padding(6.dp))
+            var menuExpanded by remember { mutableStateOf(false) }
+            Box {
+                Icon(
+                    Icons.Filled.MoreVert,
+                    contentDescription = "Más opciones",
+                    tint = StickerColors.Grape,
+                    modifier = Modifier.clickable { menuExpanded = true }.padding(6.dp),
+                )
+                SongOptionsMenu(
+                    appStyle = AppStyle.STICKERS,
+                    expanded = menuExpanded,
+                    isFavorite = isFavorite,
+                    onDismiss = { menuExpanded = false },
+                    onAddToPlaylist = onAddToPlaylist,
+                    onToggleFavorite = onToggleFavorite,
+                    onChangeImage = onChangeImage,
+                    onEditInfo = onEditInfo,
+                    onShare = onShare,
+                )
+            }
         }
     }
 }
@@ -175,6 +231,21 @@ fun ArtistDetailScreenSticker(viewModel: MusicViewModel, artistId: Long?, onBack
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val artist = uiState.artists.firstOrNull { it.artistId == artistId }
     var songForPlaylistDialog by remember { mutableStateOf<Song?>(null) }
+    var songForEditDialog by remember { mutableStateOf<Song?>(null) }
+    var songForImagePick by remember { mutableStateOf<Song?>(null) }
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val imagePickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri: Uri? ->
+        val song = songForImagePick
+        songForImagePick = null
+        if (uri != null && song != null) {
+            scope.launch {
+                SongArtStorage.copyPickedArt(context, song.id, uri)
+                SongArtStorage.invalidateCache(context, song)
+                viewModel.setCustomArtUpdated(song.id)
+            }
+        }
+    }
 
     Column(Modifier.fillMaxSize().background(StickerColors.Paper)) {
         StickerDetailTopBar(artist?.name ?: "Artista", onBack)
@@ -192,7 +263,7 @@ fun ArtistDetailScreenSticker(viewModel: MusicViewModel, artistId: Long?, onBack
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         SubcomposeAsyncImage(
-                            model = AlbumArtRequest(song.contentUri),
+                            model = AlbumArtRequest(song.contentUri, song.id),
                             contentDescription = null,
                             modifier = Modifier.size(50.dp).clip(RoundedCornerShape(14.dp)),
                             contentScale = ContentScale.Crop,
@@ -205,13 +276,29 @@ fun ArtistDetailScreenSticker(viewModel: MusicViewModel, artistId: Long?, onBack
                             Text(song.album, style = StickerType.HandwrittenSmall, color = StickerColors.Faded, maxLines = 1)
                         }
                         val isFavorite = song.id in uiState.favoriteSongIds
-                        Icon(
-                            if (isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-                            contentDescription = null,
-                            tint = StickerColors.Pink,
-                            modifier = Modifier.clickable { viewModel.toggleFavorite(song.id) }.padding(6.dp),
-                        )
-                        Icon(Icons.Filled.Add, contentDescription = "Añadir a playlist", tint = StickerColors.Grape, modifier = Modifier.clickable { songForPlaylistDialog = song }.padding(6.dp))
+                        var menuExpanded by remember { mutableStateOf(false) }
+                        Box {
+                            Icon(
+                                Icons.Filled.MoreVert,
+                                contentDescription = "Más opciones",
+                                tint = StickerColors.Grape,
+                                modifier = Modifier.clickable { menuExpanded = true }.padding(6.dp),
+                            )
+                            SongOptionsMenu(
+                                appStyle = AppStyle.STICKERS,
+                                expanded = menuExpanded,
+                                isFavorite = isFavorite,
+                                onDismiss = { menuExpanded = false },
+                                onAddToPlaylist = { songForPlaylistDialog = song },
+                                onToggleFavorite = { viewModel.toggleFavorite(song.id) },
+                                onChangeImage = {
+                                    songForImagePick = song
+                                    imagePickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                                },
+                                onEditInfo = { songForEditDialog = song },
+                                onShare = { shareSong(context, song) },
+                            )
+                        }
                     }
                 }
             }
@@ -230,6 +317,15 @@ fun ArtistDetailScreenSticker(viewModel: MusicViewModel, artistId: Long?, onBack
             onCreatePlaylist = { name -> viewModel.createPlaylistAndAddSong(name, song.id); songForPlaylistDialog = null },
         )
     }
+
+    songForEditDialog?.let { song ->
+        EditSongDialog(
+            appStyle = AppStyle.STICKERS,
+            song = song,
+            onDismiss = { songForEditDialog = null },
+            onSave = { title, artist, album -> viewModel.setSongInfo(song.id, title, artist, album); songForEditDialog = null },
+        )
+    }
 }
 
 @Composable
@@ -237,6 +333,21 @@ fun FolderDetailScreenSticker(viewModel: MusicViewModel, folderPath: String, onB
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val folder = uiState.folders.firstOrNull { it.path == folderPath }
     var songForPlaylistDialog by remember { mutableStateOf<Song?>(null) }
+    var songForEditDialog by remember { mutableStateOf<Song?>(null) }
+    var songForImagePick by remember { mutableStateOf<Song?>(null) }
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val imagePickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri: Uri? ->
+        val song = songForImagePick
+        songForImagePick = null
+        if (uri != null && song != null) {
+            scope.launch {
+                SongArtStorage.copyPickedArt(context, song.id, uri)
+                SongArtStorage.invalidateCache(context, song)
+                viewModel.setCustomArtUpdated(song.id)
+            }
+        }
+    }
 
     Column(Modifier.fillMaxSize().background(StickerColors.Paper)) {
         StickerDetailTopBar(folder?.name ?: "Carpeta", onBack)
@@ -259,6 +370,12 @@ fun FolderDetailScreenSticker(viewModel: MusicViewModel, folderPath: String, onB
                     onClick = { viewModel.playSong(song, fromList = folder.songs); onSongClick() },
                     onToggleFavorite = { viewModel.toggleFavorite(song.id) },
                     onAddToPlaylist = { songForPlaylistDialog = song },
+                    onChangeImage = {
+                        songForImagePick = song
+                        imagePickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                    },
+                    onEditInfo = { songForEditDialog = song },
+                    onShare = { shareSong(context, song) },
                 )
             }
         }
@@ -274,6 +391,15 @@ fun FolderDetailScreenSticker(viewModel: MusicViewModel, folderPath: String, onB
             onDismiss = { songForPlaylistDialog = null },
             onPlaylistSelected = { playlistId -> viewModel.addSongToPlaylist(playlistId, song.id); songForPlaylistDialog = null },
             onCreatePlaylist = { name -> viewModel.createPlaylistAndAddSong(name, song.id); songForPlaylistDialog = null },
+        )
+    }
+
+    songForEditDialog?.let { song ->
+        EditSongDialog(
+            appStyle = AppStyle.STICKERS,
+            song = song,
+            onDismiss = { songForEditDialog = null },
+            onSave = { title, artist, album -> viewModel.setSongInfo(song.id, title, artist, album); songForEditDialog = null },
         )
     }
 }
@@ -293,6 +419,22 @@ fun PlaylistDetailScreenSticker(
     var showRenameDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showAddSongsDialog by remember { mutableStateOf(false) }
+    var songForPlaylistDialog by remember { mutableStateOf<Song?>(null) }
+    var songForEditDialog by remember { mutableStateOf<Song?>(null) }
+    var songForImagePick by remember { mutableStateOf<Song?>(null) }
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val imagePickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri: Uri? ->
+        val song = songForImagePick
+        songForImagePick = null
+        if (uri != null && song != null) {
+            scope.launch {
+                SongArtStorage.copyPickedArt(context, song.id, uri)
+                SongArtStorage.invalidateCache(context, song)
+                viewModel.setCustomArtUpdated(song.id)
+            }
+        }
+    }
 
     Column(Modifier.fillMaxSize().background(StickerColors.Paper)) {
         StickerDetailTopBar(playlist?.name ?: "Playlist", onBack) {
@@ -336,7 +478,7 @@ fun PlaylistDetailScreenSticker(
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 SubcomposeAsyncImage(
-                                    model = AlbumArtRequest(song.contentUri),
+                                    model = AlbumArtRequest(song.contentUri, song.id),
                                     contentDescription = null,
                                     modifier = Modifier.size(46.dp).clip(RoundedCornerShape(14.dp)),
                                     contentScale = ContentScale.Crop,
@@ -366,6 +508,30 @@ fun PlaylistDetailScreenSticker(
                                     tint = StickerColors.Faded,
                                     modifier = Modifier.clickable { viewModel.removeSongFromPlaylist(playlistId, song.id) }.padding(4.dp),
                                 )
+                                val isFavorite = song.id in uiState.favoriteSongIds
+                                var menuExpanded by remember { mutableStateOf(false) }
+                                Box {
+                                    Icon(
+                                        Icons.Filled.MoreVert,
+                                        contentDescription = "Más opciones",
+                                        tint = StickerColors.Grape,
+                                        modifier = Modifier.clickable { menuExpanded = true }.padding(4.dp),
+                                    )
+                                    SongOptionsMenu(
+                                        appStyle = AppStyle.STICKERS,
+                                        expanded = menuExpanded,
+                                        isFavorite = isFavorite,
+                                        onDismiss = { menuExpanded = false },
+                                        onAddToPlaylist = { songForPlaylistDialog = song },
+                                        onToggleFavorite = { viewModel.toggleFavorite(song.id) },
+                                        onChangeImage = {
+                                            songForImagePick = song
+                                            imagePickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                                        },
+                                        onEditInfo = { songForEditDialog = song },
+                                        onShare = { shareSong(context, song) },
+                                    )
+                                }
                             }
                         }
                     }
@@ -400,6 +566,28 @@ fun PlaylistDetailScreenSticker(
                 ids.forEach { viewModel.addSongToPlaylist(playlistId, it) }
                 showAddSongsDialog = false
             },
+        )
+    }
+
+    songForPlaylistDialog?.let { song ->
+        val playlistIdsWithSong by remember(song.id) { viewModel.playlistIdsContainingSong(song.id) }
+            .collectAsStateWithLifecycle(initialValue = emptySet())
+        AddToPlaylistDialog(
+            appStyle = AppStyle.STICKERS,
+            playlists = uiState.playlists,
+            playlistIdsWithSong = playlistIdsWithSong,
+            onDismiss = { songForPlaylistDialog = null },
+            onPlaylistSelected = { targetPlaylistId -> viewModel.addSongToPlaylist(targetPlaylistId, song.id); songForPlaylistDialog = null },
+            onCreatePlaylist = { name -> viewModel.createPlaylistAndAddSong(name, song.id); songForPlaylistDialog = null },
+        )
+    }
+
+    songForEditDialog?.let { song ->
+        EditSongDialog(
+            appStyle = AppStyle.STICKERS,
+            song = song,
+            onDismiss = { songForEditDialog = null },
+            onSave = { title, artist, album -> viewModel.setSongInfo(song.id, title, artist, album); songForEditDialog = null },
         )
     }
 }

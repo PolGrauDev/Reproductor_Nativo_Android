@@ -4,11 +4,12 @@ import androidx.room.Database
 import androidx.room.RoomDatabase
 
 @Database(
-    entities = [FavoriteEntity::class, PlaylistEntity::class, PlaylistSongCrossRef::class],
-    version = 1,
+    entities = [FavoriteEntity::class, PlaylistEntity::class, PlaylistSongCrossRef::class, SongOverrideEntity::class],
+    version = 2,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun favoriteDao(): FavoriteDao
     abstract fun playlistDao(): PlaylistDao
+    abstract fun songOverrideDao(): SongOverrideDao
 }

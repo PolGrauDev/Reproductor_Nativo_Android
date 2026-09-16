@@ -8,7 +8,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -42,11 +45,12 @@ fun MiniPlayerPapel(song: Song, isPlaying: Boolean, onTogglePlayPause: () -> Uni
                 .fillMaxWidth()
                 .background(PapelColors.Surface)
                 .clickable(onClick = onClick)
-                .padding(14.dp, 10.dp),
+                .padding(14.dp, 10.dp)
+                .padding(bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             SubcomposeAsyncImage(
-                model = AlbumArtRequest(song.contentUri),
+                model = AlbumArtRequest(song.contentUri, song.id),
                 contentDescription = null,
                 modifier = Modifier.size(44.dp).clip(RoundedCornerShape(2.dp)),
                 contentScale = ContentScale.Crop,

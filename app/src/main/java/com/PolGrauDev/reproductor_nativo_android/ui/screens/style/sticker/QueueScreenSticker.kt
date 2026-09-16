@@ -86,7 +86,7 @@ fun QueueScreenSticker(viewModel: MusicViewModel, onBack: () -> Unit) {
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         SubcomposeAsyncImage(
-                            model = AlbumArtRequest(song.contentUri),
+                            model = AlbumArtRequest(song.contentUri, song.id),
                             contentDescription = null,
                             modifier = Modifier.size(40.dp).clip(RoundedCornerShape(13.dp)),
                             contentScale = ContentScale.Crop,

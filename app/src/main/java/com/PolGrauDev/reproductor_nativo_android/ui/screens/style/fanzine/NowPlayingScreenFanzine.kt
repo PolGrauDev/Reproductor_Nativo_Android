@@ -115,7 +115,7 @@ fun NowPlayingScreenFanzine(viewModel: MusicViewModel, uiState: MusicUiState, on
                         .background(FanzineColors.Grime, CircleShape),
                 )
                 SubcomposeAsyncImage(
-                    model = song?.contentUri?.let { AlbumArtRequest(it) },
+                    model = song?.let { AlbumArtRequest(it.contentUri, it.id) },
                     contentDescription = null,
                     modifier = Modifier
                         .fillMaxWidth(0.8f)

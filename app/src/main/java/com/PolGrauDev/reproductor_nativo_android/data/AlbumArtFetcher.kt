@@ -16,7 +16,7 @@ import coil3.request.Options
  * No se usa [Uri] directamente como modelo: Coil3 mapea android.net.Uri a su propio tipo
  * interno antes de despachar a los Fetcher.Factory, así que un Fetcher.Factory<Uri> nunca
  * llega a invocarse. Con un modelo propio evitamos esa colisión. */
-data class AlbumArtRequest(val songUri: Uri)
+data class AlbumArtRequest(val songUri: Uri, val songId: Long)
 
 class AlbumArtKeyer : Keyer<AlbumArtRequest> {
     override fun key(data: AlbumArtRequest, options: Options): String = data.songUri.toString()
@@ -40,7 +40,9 @@ class AlbumArtFetcher(
 ) : Fetcher {
 
     override suspend fun fetch(): FetchResult? {
-        val bytes = AlbumArtExtractor.extractEmbeddedArt(options.context, request.songUri) ?: return null
+        val bytes = AlbumArtExtractor.extractCustomArt(options.context, request.songId)
+            ?: AlbumArtExtractor.extractEmbeddedArt(options.context, request.songUri)
+            ?: return null
 
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)

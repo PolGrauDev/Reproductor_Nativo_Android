@@ -1,5 +1,9 @@
 package com.PolGrauDev.reproductor_nativo_android.ui.screens.style.fanzine
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -25,7 +29,7 @@ import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.CircularProgressIndicator
@@ -35,6 +39,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -42,6 +48,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -51,6 +58,7 @@ import coil3.compose.SubcomposeAsyncImage
 import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.fanzine.AlbumArtFallbackFanzine
 import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.AppStyle
 import com.PolGrauDev.reproductor_nativo_android.data.AlbumArtRequest
+import com.PolGrauDev.reproductor_nativo_android.data.SongArtStorage
 import com.PolGrauDev.reproductor_nativo_android.data.model.AlbumGroup
 import com.PolGrauDev.reproductor_nativo_android.data.model.ArtistGroup
 import com.PolGrauDev.reproductor_nativo_android.data.model.FolderGroup
@@ -58,12 +66,16 @@ import com.PolGrauDev.reproductor_nativo_android.data.model.PlaylistSummary
 import com.PolGrauDev.reproductor_nativo_android.data.model.Song
 import com.PolGrauDev.reproductor_nativo_android.data.model.SortOrder
 import com.PolGrauDev.reproductor_nativo_android.ui.components.AddToPlaylistDialog
+import com.PolGrauDev.reproductor_nativo_android.ui.components.EditSongDialog
+import com.PolGrauDev.reproductor_nativo_android.ui.components.SongOptionsMenu
+import com.PolGrauDev.reproductor_nativo_android.ui.util.shareSong
 import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.fanzine.FanzineColors
 import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.fanzine.FanzineFonts
 import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.fanzine.fanzineTilt
 import com.PolGrauDev.reproductor_nativo_android.ui.theme.style.fanzine.photocopyGrain
 import com.PolGrauDev.reproductor_nativo_android.viewmodel.MusicUiState
 import com.PolGrauDev.reproductor_nativo_android.viewmodel.MusicViewModel
+import kotlinx.coroutines.launch
 
 private val TABS = listOf("Temas", "Discos", "Grupos", "Carpetas", "Listas")
 
@@ -79,8 +91,23 @@ fun LibraryScreenFanzine(
     onPlaylistClick: (Long) -> Unit,
     onSettingsClick: () -> Unit,
 ) {
-    var selectedTab by remember { mutableStateOf(0) }
+    var selectedTab by rememberSaveable { mutableStateOf(0) }
     var songForPlaylistDialog by remember { mutableStateOf<Song?>(null) }
+    var songForEditDialog by remember { mutableStateOf<Song?>(null) }
+    var songForImagePick by remember { mutableStateOf<Song?>(null) }
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val imagePickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri: Uri? ->
+        val song = songForImagePick
+        songForImagePick = null
+        if (uri != null && song != null) {
+            scope.launch {
+                SongArtStorage.copyPickedArt(context, song.id, uri)
+                SongArtStorage.invalidateCache(context, song)
+                viewModel.setCustomArtUpdated(song.id)
+            }
+        }
+    }
 
     Column(
         Modifier
@@ -103,6 +130,9 @@ fun LibraryScreenFanzine(
                     onClick = { song -> viewModel.playSong(song); onSongClick() },
                     onToggleFavorite = viewModel::toggleFavorite,
                     onAddToPlaylist = { song -> songForPlaylistDialog = song },
+                    onChangeImage = { song -> songForImagePick = song; imagePickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
+                    onEditInfo = { song -> songForEditDialog = song },
+                    onShare = { song -> shareSong(context, song) },
                 )
                 1 -> FanzineAlbumsTab(uiState.albums, onAlbumClick)
                 2 -> FanzineArtistsTab(uiState.artists, onArtistClick)
@@ -133,6 +163,18 @@ fun LibraryScreenFanzine(
             onCreatePlaylist = { name ->
                 viewModel.createPlaylistAndAddSong(name, song.id)
                 songForPlaylistDialog = null
+            },
+        )
+    }
+
+    songForEditDialog?.let { song ->
+        EditSongDialog(
+            appStyle = AppStyle.FANZINE,
+            song = song,
+            onDismiss = { songForEditDialog = null },
+            onSave = { title, artist, album ->
+                viewModel.setSongInfo(song.id, title, artist, album)
+                songForEditDialog = null
             },
         )
     }
@@ -259,7 +301,15 @@ private fun FanzineTabsRow(selectedTab: Int, onSelect: (Int) -> Unit) {
 }
 
 @Composable
-private fun FanzineSongsTab(uiState: MusicUiState, onClick: (Song) -> Unit, onToggleFavorite: (Long) -> Unit, onAddToPlaylist: (Song) -> Unit) {
+private fun FanzineSongsTab(
+    uiState: MusicUiState,
+    onClick: (Song) -> Unit,
+    onToggleFavorite: (Long) -> Unit,
+    onAddToPlaylist: (Song) -> Unit,
+    onChangeImage: (Song) -> Unit,
+    onEditInfo: (Song) -> Unit,
+    onShare: (Song) -> Unit,
+) {
     val songs = uiState.filteredSongs
     if (songs.isEmpty()) {
         FanzineCentered { Text("Sin resultados", fontFamily = FanzineFonts.SpecialElite, fontSize = 13.sp, color = FanzineColors.Faded) }
@@ -274,13 +324,26 @@ private fun FanzineSongsTab(uiState: MusicUiState, onClick: (Song) -> Unit, onTo
                 onClick = { onClick(song) },
                 onToggleFavorite = { onToggleFavorite(song.id) },
                 onAddToPlaylist = { onAddToPlaylist(song) },
+                onChangeImage = { onChangeImage(song) },
+                onEditInfo = { onEditInfo(song) },
+                onShare = { onShare(song) },
             )
         }
     }
 }
 
 @Composable
-fun FanzineSongRow(song: Song, isFavorite: Boolean, tilt: Float, onClick: () -> Unit, onToggleFavorite: () -> Unit, onAddToPlaylist: () -> Unit) {
+fun FanzineSongRow(
+    song: Song,
+    isFavorite: Boolean,
+    tilt: Float,
+    onClick: () -> Unit,
+    onToggleFavorite: () -> Unit,
+    onAddToPlaylist: () -> Unit,
+    onChangeImage: () -> Unit,
+    onEditInfo: () -> Unit,
+    onShare: () -> Unit,
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -291,7 +354,7 @@ fun FanzineSongRow(song: Song, isFavorite: Boolean, tilt: Float, onClick: () -> 
         verticalAlignment = Alignment.CenterVertically,
     ) {
         SubcomposeAsyncImage(
-            model = AlbumArtRequest(song.contentUri),
+            model = AlbumArtRequest(song.contentUri, song.id),
             contentDescription = null,
             modifier = Modifier.size(46.dp),
             contentScale = ContentScale.Crop,
@@ -303,19 +366,26 @@ fun FanzineSongRow(song: Song, isFavorite: Boolean, tilt: Float, onClick: () -> 
             Text(song.title.uppercase(), fontFamily = FanzineFonts.Anton, fontSize = 17.sp, color = FanzineColors.Ink, maxLines = 1)
             Text(song.artist, fontFamily = FanzineFonts.SpecialElite, fontSize = 13.sp, color = FanzineColors.Grime, maxLines = 1)
         }
-        Icon(
-            if (isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-            contentDescription = if (isFavorite) "Quitar de favoritos" else "Añadir a favoritos",
-            tint = FanzineColors.Red,
-            modifier = Modifier.clickable(onClick = onToggleFavorite).padding(6.dp),
-        )
-        Spacer(Modifier.width(4.dp))
-        Icon(
-            Icons.Filled.Add,
-            contentDescription = "Añadir a playlist",
-            tint = FanzineColors.Ink,
-            modifier = Modifier.clickable(onClick = onAddToPlaylist).padding(6.dp),
-        )
+        var menuExpanded by remember { mutableStateOf(false) }
+        Box {
+            Icon(
+                Icons.Filled.MoreVert,
+                contentDescription = "Más opciones",
+                tint = FanzineColors.Ink,
+                modifier = Modifier.clickable { menuExpanded = true }.padding(6.dp),
+            )
+            SongOptionsMenu(
+                appStyle = AppStyle.FANZINE,
+                expanded = menuExpanded,
+                isFavorite = isFavorite,
+                onDismiss = { menuExpanded = false },
+                onAddToPlaylist = onAddToPlaylist,
+                onToggleFavorite = onToggleFavorite,
+                onChangeImage = onChangeImage,
+                onEditInfo = onEditInfo,
+                onShare = onShare,
+            )
+        }
     }
 }
 
@@ -332,7 +402,7 @@ private fun FanzineAlbumsTab(albums: List<AlbumGroup>, onClick: (AlbumGroup) -> 
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 SubcomposeAsyncImage(
-                    model = AlbumArtRequest(album.songs.first().contentUri),
+                    model = AlbumArtRequest(album.songs.first().contentUri, album.songs.first().id),
                     contentDescription = null,
                     modifier = Modifier.size(46.dp),
                     contentScale = ContentScale.Crop,

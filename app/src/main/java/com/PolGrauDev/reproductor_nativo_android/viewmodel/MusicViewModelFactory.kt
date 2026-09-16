@@ -13,6 +13,7 @@ class MusicViewModelFactory(private val app: App) : ViewModelProvider.Factory {
         return MusicViewModel(
             app.mediaRepository,
             app.playlistRepository,
+            app.songOverrideRepository,
             app.settingsRepository,
             app.applicationContext,
         ) as T

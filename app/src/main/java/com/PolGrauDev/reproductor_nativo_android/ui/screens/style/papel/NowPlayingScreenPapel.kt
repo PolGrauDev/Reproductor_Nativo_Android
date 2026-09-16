@@ -115,7 +115,7 @@ fun NowPlayingScreenPapel(viewModel: MusicViewModel, uiState: MusicUiState, onBa
                     contentAlignment = Alignment.Center,
                 ) {
                     SubcomposeAsyncImage(
-                        model = song?.contentUri?.let { AlbumArtRequest(it) },
+                        model = song?.let { AlbumArtRequest(it.contentUri, it.id) },
                         contentDescription = null,
                         modifier = Modifier
                             .fillMaxWidth(0.9f)

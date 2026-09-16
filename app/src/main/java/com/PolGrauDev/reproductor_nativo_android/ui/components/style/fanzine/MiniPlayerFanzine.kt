@@ -5,8 +5,11 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -38,11 +41,12 @@ fun MiniPlayerFanzine(song: Song, isPlaying: Boolean, onTogglePlayPause: () -> U
                 .fillMaxWidth()
                 .background(FanzineColors.Paper)
                 .clickable(onClick = onClick)
-                .padding(12.dp, 10.dp),
+                .padding(12.dp, 10.dp)
+                .padding(bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             SubcomposeAsyncImage(
-                model = AlbumArtRequest(song.contentUri),
+                model = AlbumArtRequest(song.contentUri, song.id),
                 contentDescription = null,
                 modifier = Modifier.size(46.dp),
                 contentScale = ContentScale.Crop,

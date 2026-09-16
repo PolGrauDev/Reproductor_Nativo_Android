@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.PolGrauDev.reproductor_nativo_android.data.MediaRepository
 import com.PolGrauDev.reproductor_nativo_android.data.PlaylistRepository
 import com.PolGrauDev.reproductor_nativo_android.data.SettingsRepository
+import com.PolGrauDev.reproductor_nativo_android.data.SongOverrideRepository
 import com.PolGrauDev.reproductor_nativo_android.data.model.AlbumGroup
 import com.PolGrauDev.reproductor_nativo_android.data.model.ArtistGroup
 import com.PolGrauDev.reproductor_nativo_android.data.model.FolderGroup
@@ -15,6 +16,7 @@ import com.PolGrauDev.reproductor_nativo_android.data.model.SortOrder
 import com.PolGrauDev.reproductor_nativo_android.data.model.toAlbumGroups
 import com.PolGrauDev.reproductor_nativo_android.data.model.toArtistGroups
 import com.PolGrauDev.reproductor_nativo_android.data.model.toFolderGroups
+import com.PolGrauDev.reproductor_nativo_android.data.model.withOverrides
 import com.PolGrauDev.reproductor_nativo_android.player.PlaybackConnection
 import com.PolGrauDev.reproductor_nativo_android.player.PlaybackProgress
 import com.PolGrauDev.reproductor_nativo_android.player.PlaybackUiState
@@ -115,11 +117,17 @@ private data class CombinedExtras(
 class MusicViewModel(
     private val repository: MediaRepository,
     private val playlistRepository: PlaylistRepository,
+    private val songOverrideRepository: SongOverrideRepository,
     private val settingsRepository: SettingsRepository,
     applicationContext: Context,
 ) : ViewModel() {
 
     private val playbackConnection = PlaybackConnection(applicationContext)
+
+    private val effectiveSongs: Flow<List<Song>> = combine(
+        repository.songs,
+        songOverrideRepository.overrides,
+    ) { songs, overrides -> songs.withOverrides(overrides) }
 
     /**
      * Posición/duración de reproducción, expuestas aparte de [uiState] a propósito: cambian
@@ -156,7 +164,7 @@ class MusicViewModel(
     ) { library, settings -> CombinedExtras(library, settings) }
 
     val uiState: StateFlow<MusicUiState> = combine(
-        repository.songs,
+        effectiveSongs,
         playbackConnection.state,
         isLoadingLibrary,
         searchQuery,
@@ -249,6 +257,15 @@ class MusicViewModel(
         viewModelScope.launch { playlistRepository.setFavorite(songId, !isFavorite) }
     }
 
+    fun setSongInfo(songId: Long, title: String, artist: String, album: String) {
+        if (title.isBlank()) return
+        viewModelScope.launch { songOverrideRepository.setTextOverride(songId, title.trim(), artist.trim(), album.trim()) }
+    }
+
+    fun setCustomArtUpdated(songId: Long) {
+        viewModelScope.launch { songOverrideRepository.setCustomArtUpdatedAt(songId, System.currentTimeMillis()) }
+    }
+
     fun createPlaylist(name: String) {
         if (name.isBlank()) return
         viewModelScope.launch { playlistRepository.createPlaylist(name.trim()) }
@@ -297,7 +314,7 @@ class MusicViewModel(
      * porque está parametrizado por playlist.
      */
     fun playlistSongsFlow(playlistId: Long): Flow<List<Song>> = combine(
-        repository.songs,
+        effectiveSongs,
         playlistRepository.observeSongIds(playlistId),
     ) { songs, songIds ->
         val byId = songs.associateBy { it.id }
